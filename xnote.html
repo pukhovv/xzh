@@ -46,9 +46,10 @@
 </div>
 </div>
 
-<script src="https://unpkg.com/hanzi-writer"></script>
+<!-- <script src="https://unpkg.com/hanzi-writer"></script> -->
+<script src="_xiezh_hanzi-writer.min.js"></script>
 <script>
-    var xversion = "3.2"
+    var xversion = "4.0"
     var xlog = (message) => {
         const logContainer = document.getElementById("log-messages");
         logContainer.hidden = false;
@@ -74,6 +75,12 @@
         }
         globalThis.xnoteLoaded = true;
     })();
+
+    var assetPrefix = (globalThis.ankiPlatform == "desktop" ? ""
+        : globalThis.AnkiDroidJS ? "https://appassets.androidplatform.net"
+            : ".") + "/";
+
+    var loadAssetJSON = (name) => fetch(assetPrefix + name).then((r) => r.json());
 
     var setupClickerBtn = (btnName, onClick) => {
         document.getElementById(btnName).addEventListener('click', errCheck(onClick));
@@ -151,7 +158,7 @@
                 this.pyBase = pydata.base
                 this.pyTone = pydata.tone
             }
-            this.audio = new Audio(`_xiezh_${this.pyBase + this.pyTone}.mp3`);
+            this.audio = new Audio(`_xiezh_p_${this.pyBase + this.pyTone}.mp3`);
         }
 
         toString = () => {
@@ -198,6 +205,9 @@
             drawingWidth: 24,
             strokeFadeDuration: 150,
             strokeAnimationSpeed: 2, delayBetweenStrokes: 30,
+            charDataLoader: (char, onComplete, onError) =>
+                loadAssetJSON(`_xiezh_w_${char}.json`).then(onComplete).catch(onError),
+            onLoadCharDataError: (e) => xlog("Writer char data load failed: " + e),
             showCharacter: false,
             showOutline: isOutlineVisible,
         })
