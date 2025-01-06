@@ -1,0 +1,354 @@
+<div id="card-container" style="padding: 15px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
+
+<div id="character-lines" style="text-align: center; margin-bottom: 10px;">
+    <div style="font-size: 64px; line-height: 1;">{{text-sc}}</div>
+    <div style="font-size: 64px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
+</div>
+
+<div style="text-align:center;">
+    <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' class='grid-color' id='hanzi-draw'>
+        <g id="char-grid">
+            <line x1='0' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
+            <line x1='100%' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
+            <line x1='50%' y1='0' x2='50%' y2='100%' stroke='var(--btn-background)' />
+            <line x1='0' y1='50%' x2='100%' y2='50%' stroke='var(--btn-background)' />
+            <line x1='0' y1='0' x2='100%' y2='0' stroke='var(--btn-background)' />
+            <line x1='0' y1='100%' x2='100%' y2='100%' stroke='var(--btn-background)' />
+            <line x1='0' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
+            <line x1='100%' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
+        </g>
+    </svg>
+</div>
+
+<div id="buttons" style="display: flex; justify-content: space-around; margin-top: 7px;">
+    <button id="run-animation" class="flat-btn">▶️</button>
+    <button id="toggle-outline" class="flat-btn">🖌️</button>
+    <button id="next-character" class="flat-btn">></button>
+    <button id="restart-quiz" class="flat-btn">🔄</button>
+    <button id="play-full-audio" class="flat-btn">🔊</button>
+    <button id="pleco-lookup" class="flat-btn">🔍</button>
+</div>
+
+<div id="pinyin-quiz" style="margin-top: 20px; text-align: center;">
+    <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
+        <button class="tone-btn flat-btn" data-tone="1">—</button>
+        <button class="tone-btn flat-btn" data-tone="2">/</button>
+        <button class="tone-btn flat-btn" data-tone="3">∨</button>
+        <button class="tone-btn flat-btn" data-tone="4">\</button>
+        <button class="tone-btn flat-btn" data-tone="5">n</button>
+    </div>
+</div>
+
+<div id="debug-log"
+    style="margin-top: 100px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; font-size: 12px; color: #333; max-height: 100px; overflow-y: auto;">
+    <strong>xlog:</strong>
+    <ul id="log-messages" style="list-style-type: none; padding: 0;"></ul>
+</div>
+</div>
+
+<script src="https://unpkg.com/hanzi-writer"></script>
+<script>
+    var xversion = "3.2"
+    var xlog = (message) => {
+        const logContainer = document.getElementById("log-messages");
+        logContainer.hidden = false;
+        const logEntry = document.createElement("li");
+        logEntry.textContent = message;
+        logContainer.appendChild(logEntry);
+    }
+    var errCheck = (f) => {
+        return (...args) => {
+            try { f(...args) } catch (e) {
+                xlog("errCheck: " + e);
+                xlog(e.stack);
+                throw e;
+            }
+        }
+        return f;
+    }
+
+    (() => {
+        xlog("<script> v" + xversion + " loaded=" + !!globalThis.xnoteLoaded);
+        window.onerror = (message, source, lineno, colno, error) => {
+            xlog("window.onerror: " + message + " " + source + " " + lineno + " " + colno + " " + error);
+        }
+        globalThis.xnoteLoaded = true;
+    })();
+
+    var setupClickerBtn = (btnName, onClick) => {
+        document.getElementById(btnName).addEventListener('click', errCheck(onClick));
+    };
+
+    /**********************************************************************/
+    // styling
+
+    ((theme) => {
+        const themeStyles = {
+            dark: {
+                'char-background': '#000000',
+                'stroke-color': '#ffffff',
+                'outline-color': '#444444',
+                'py-color1': '#ff8080',
+                'py-color2': '#80ff80',
+                'py-color3': '#8080ff',
+                'py-color4': '#df80ff',
+                'py-color5': '#c6c6c6',
+                'btn-background': '#222222',
+                'btn-color': '#ffffff',
+                'btn-hover': '#333333',
+            },
+            light: {
+                'char-background': '#ffffff',
+                'stroke-color': '#000000',
+                'outline-color': '#aaaaaa',
+                'py-color1': '#e30000',
+                'py-color2': '#02b31c',
+                'py-color3': '#1510f0',
+                'py-color4': '#8900bf',
+                'py-color5': '#777777',
+                'btn-background': '#f5f5f5',
+                'btn-color': '#000000',
+                'btn-hover': '#dddddd'
+            }
+        };
+        const commonThemeStyle = {
+            'true-color': '#00cc00',
+            'false-color': '#cc0000',
+        }
+        const n2prop = (n) => "--" + n;
+        const addStyles = (s) => Object.keys(s).forEach(key => {
+            document.documentElement.style.setProperty(n2prop(key), s[key]);
+        });
+        addStyles(commonThemeStyle);
+        addStyles(themeStyles[theme]);
+    })(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+    var xstyle = (prop) => {
+        return getComputedStyle(document.documentElement).getPropertyValue('--' + prop).trim()
+    }
+
+    var fadeto = (cf, ct, sc) => {
+        const s2n = (s) => parseInt(s.substr(1), 16);
+        const nf = s2n(cf)
+        const nt = s2n(ct)
+        let res = 0;
+        for (let i = 0; i < 3; ++i) {
+            let m = 0xff << (i * 8)
+            res += ((nt & m) * sc + (nf & m) * (1 - sc)) & m
+        }
+        return "#" + res.toString(16).padStart(6, "0")
+    }
+
+    /**********************************************************************/
+    // hanzi processing
+
+    var HanziChar = class {
+        constructor(sym, py) {
+            this.sym = sym
+            this.py = py;
+            {
+                let pydata = HanziChar.decodePinyin(py)
+                this.pyBase = pydata.base
+                this.pyTone = pydata.tone
+            }
+            this.audio = new Audio(`_xiezh_${this.pyBase + this.pyTone}.mp3`);
+        }
+
+        toString = () => {
+            return `HanziChar{${this.sym}/${this.py}}`
+        }
+
+        static buildChars = (hText, hPinyin) => {
+            let characters = hText.split("");
+            let pinyins = hPinyin.replace("//", "").split(" ");
+            if (characters.length == 0 || characters.length != pinyins.length) {
+                xlog("broken input: " + hText + " " + hPinyin)
+                return [new HanziChar("误", "wù")];
+            }
+            return characters.map((_, i) => new HanziChar(characters[i], pinyins[i]))
+        }
+
+        static decodePinyin = (pinyin) => {
+            const toneMap = { '\u0304': 1, '\u0301': 2, '\u030C': 3, '\u0300': 4 };
+            let tone = 5;
+            let base = '';
+
+            for (const char of pinyin.normalize('NFD')) {
+                if (toneMap[char]) {
+                    tone = toneMap[char];
+                } else if (!char.match(/\p{M}/u)) {
+                    base += char; // exclude diacritics
+                }
+            }
+            return { base, tone };
+        }
+    }
+
+    /**********************************************************************/
+    // hanzi writer
+
+    var hanziWriter = (() => {
+        let isOutlineVisible = true;
+        const writer = HanziWriter.create('hanzi-draw', '', {
+            width: 280, height: 280, padding: 5,
+            strokeColor: xstyle('stroke-color'),
+            drawingColor: xstyle('stroke-color'),
+            outlineColor: xstyle('outline-color'),
+            highlightCompleteColor: xstyle('char-background'),
+            drawingWidth: 24,
+            strokeFadeDuration: 150,
+            strokeAnimationSpeed: 2, delayBetweenStrokes: 30,
+            showCharacter: false,
+            showOutline: isOutlineVisible,
+        })
+        const setupHanzi = (hanzi) => {
+            writer.setCharacter(hanzi.sym);
+            const pycolor = xstyle('py-color' + hanzi.pyTone);
+            writer.updateColor('strokeColor', pycolor);
+            writer.updateColor('highlightCompleteColor', fadeto(pycolor, xstyle('stroke-color'), 0.3));
+        }
+        const resetQuiz = (hanzi) => {
+            writer.quiz({
+                showHintAfterMisses: 2,
+                markStrokeCorrectAfterMisses: 3,
+                leniency: 1.3,
+                onComplete: () => { hanzi.audio.play() },
+            })
+        };
+
+        setupClickerBtn('toggle-outline', () => {
+            isOutlineVisible = !isOutlineVisible;
+            isOutlineVisible ? writer.showOutline() : writer.hideOutline();
+        });
+        setupClickerBtn('restart-quiz', () => writer.quiz());
+        setupClickerBtn('run-animation', () => writer.animateCharacter());
+
+        return {
+            reset: (hanzi) => {
+                xlog("writer reset: " + hanzi);
+                setupHanzi(hanzi);
+                resetQuiz(hanzi);
+            }
+        }
+    })();
+
+    /**********************************************************************/
+    // pinyin quiz
+
+    var pinyinQuiz = (() => {
+        let hanzi = undefined;
+
+        const flushButtonColors = () => {
+            document.querySelectorAll('.tone-btn').forEach(btn => {
+                btn.style.backgroundColor = '';
+            });
+        };
+
+        document.querySelectorAll('.tone-btn').forEach((btn, index) => {
+            btn.addEventListener('click', errCheck(() => {
+                flushButtonColors();
+                const selectedTone = index + 1; // 1-5
+                if (selectedTone === hanzi.pyTone) {
+                    btn.style.backgroundColor = xstyle('py-color' + hanzi.pyTone)
+                    hanzi.audio.play()
+                }
+            }));
+        });
+
+        return {
+            reset: (newHanzi) => {
+                xlog("pinyinQuiz reset: " + newHanzi)
+                hanzi = newHanzi
+                flushButtonColors();
+            }
+        }
+    })();
+
+    /**********************************************************************/
+    // main
+
+    var xnote = (() => {
+        let hanziArr = undefined;
+        let charIdx = 0;
+
+        const updateChar = () => {
+            const hanzi = hanziArr[charIdx];
+            xlog("xnote updateChar: " + charIdx + hanzi)
+            hanziWriter.reset(hanzi);
+            pinyinQuiz.reset(hanzi);
+        }
+
+        setupClickerBtn('next-character', () => {
+            if (hanziArr.length > 1) {
+                charIdx = (charIdx + 1) % hanziArr.length;
+                updateChar();
+            }
+        });
+
+        setupClickerBtn('play-full-audio', () => {
+            let idx = 0;
+            const playNext = () => {
+                if (idx < hanziArr.length) {
+                    const audio = hanziArr[idx++].audio;
+                    audio.play();
+                    audio.onended = () => {
+                        audio.onended = undefined;
+                        playNext();
+                    }
+                }
+            }
+            playNext();
+        });
+
+        setupClickerBtn('pleco-lookup', () => {
+            const text = hanziArr.reduce((a, hanzi) => a + hanzi.sym, "");
+            window.open(`plecoapi://x-callback-url/s?q=${text}`, '_blank');
+        });
+
+        return {
+            reset: (hText, hPinyin) => {
+                xlog("xnote init: " + hText + " " + hPinyin)
+                hanziArr = HanziChar.buildChars(hText, hPinyin)
+                document.getElementById('next-character').style.visibility =
+                    hanziArr.length > 1 ? 'initial' : 'hidden';
+                updateChar();
+            }
+        }
+    })();
+
+    errCheck(() => xnote.reset("{{text-sc}}", "{{pinyin}}"))()
+
+</script>
+
+<style>
+    .flat-btn {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 5px;
+        background-color: var(--btn-background);
+        color: var(--btn-color);
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.1s;
+    }
+
+    .flat-btn:hover {
+        background-color: var(--btn-hover);
+    }
+
+    .tone-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+        border-radius: 5px;
+    }
+
+    .grid-color {
+        margin: 6px;
+        background-color: var(--char-background);
+        padding: 2px;
+        -webkit-box-shadow: 0px 0px 10px -5px rgba(0, 0, 0, 0.5);
+        -moz-box-shadow: 0px 0px 10px -5px rgba(0, 0, 0, 0.5);
+        box-shadow: 0px 0px 10px -5px rgba(0, 0, 0, 0.5);
+    }
+</style>
