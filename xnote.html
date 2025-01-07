@@ -1,11 +1,11 @@
-<div id="card-container" style="padding: 15px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
+<div id="card-container" style="padding: 5px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
 
-<div id="character-lines" style="text-align: center; margin-bottom: 10px;">
+<div id="character-lines" style="text-align: center; margin-top: 0px;">
     <div style="font-size: 64px; line-height: 1;">{{text-sc}}</div>
     <div style="font-size: 64px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
 </div>
 
-<div style="text-align:center;">
+<div style="text-align:center; margin-top: 5px">
     <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' class='grid-color' id='hanzi-draw'>
         <g id="char-grid">
             <line x1='0' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
@@ -20,13 +20,14 @@
     </svg>
 </div>
 
-<div id="buttons" style="display: flex; justify-content: space-around; margin-top: 7px;">
-    <button id="run-animation" class="flat-btn">▶️</button>
-    <button id="toggle-outline" class="flat-btn">🖌️</button>
-    <button id="next-character" class="flat-btn">></button>
-    <button id="restart-quiz" class="flat-btn">🔄</button>
-    <button id="play-full-audio" class="flat-btn">🔊</button>
-    <button id="pleco-lookup" class="flat-btn">🔍</button>
+<div id="buttons" style="display: flex; justify-content: space-around; margin-top: 7px; font-size: 24px;">
+    <button id="run-animation" class="flat-btn">写</button>
+    <button id="toggle-outline" class="flat-btn">描</button>
+    <button id="next-character" class="flat-btn">换</button>
+    <button id="restart-quiz" class="flat-btn">新</button>
+    <button id="play-full-audio" class="flat-btn">声</button>
+    <button id="pleco-lookup" class="flat-btn">鱼</button>
+    <button id="change-mode" class="flat-btn">设</button>
 </div>
 
 <div id="pinyin-quiz" style="margin-top: 20px; text-align: center;">
@@ -37,6 +38,10 @@
         <button class="tone-btn flat-btn" data-tone="4">\</button>
         <button class="tone-btn flat-btn" data-tone="5">n</button>
     </div>
+</div>
+
+<div id="char-data" style="text-align: center; margin-bottom: 10px;"></div>
+<div id="freq-display" style="font-size: 16px; line-height: 1;">empty</div>
 </div>
 
 <div id="debug-log"
@@ -80,11 +85,56 @@
         : globalThis.AnkiDroidJS ? "https://appassets.androidplatform.net"
             : ".") + "/";
 
-    var loadAssetJSON = (name) => fetch(assetPrefix + name).then((r) => r.json());
+    var loadAssetJSON = (name) => fetch(assetPrefix + name, { cache: "force-cache" }).then((r) => r.json());
+
+    var xcacheGet = (prop) => {
+        if (typeof prop != "string") {
+            throw new Error("bad xcache parameters");
+        }
+        return sessionStorage.getItem("_xiehz_" + prop) ?? undefined
+    }
+    var xcacheSet = (prop, v) => {
+        if (typeof prop != "string" || typeof v != "string") {
+            throw new Error("bad xcache parameters");
+        }
+        sessionStorage.setItem("_xiehz_" + prop, v)
+        return v;
+    }
 
     var setupClickerBtn = (btnName, onClick) => {
         document.getElementById(btnName).addEventListener('click', errCheck(onClick));
     };
+
+    /**********************************************************************/
+    // configs
+
+    var xconfig = undefined;
+
+    var xnoteConfigs = (() => {
+        const writeHard = {
+            outline: true,
+            outlineTime: 600,
+        }
+        const writeEasy = {
+            outline: true,
+        }
+        const noWriting = {
+            visible: true,
+        }
+        const configs = [writeHard, writeEasy, noWriting]
+
+        let configIdx = Number(xcacheGet("configIdx") ?? xcacheSet("configIdx", "0"));
+        xconfig = configs[configIdx];
+
+        return {
+            next: () => {
+                configIdx = (configIdx + 1) % configs.length;
+                xcacheSet("configIdx", configIdx.toString())
+                xconfig = configs[configIdx];
+                xlog("set global config: " + configIdx)
+            }
+        }
+    })();
 
     /**********************************************************************/
     // styling
@@ -195,7 +245,8 @@
     // hanzi writer
 
     var hanziWriter = (() => {
-        let isOutlineVisible = true;
+        let hanzi = undefined;
+        let isOutlineVisible = false;
         const writer = HanziWriter.create('hanzi-draw', '', {
             width: 280, height: 280, padding: 5,
             strokeColor: xstyle('stroke-color'),
@@ -204,40 +255,49 @@
             highlightCompleteColor: xstyle('char-background'),
             drawingWidth: 24,
             strokeFadeDuration: 150,
-            strokeAnimationSpeed: 2, delayBetweenStrokes: 30,
-            charDataLoader: (char, onComplete, onError) =>
-                loadAssetJSON(`_xiezh_w_${char}.json`).then(onComplete).catch(onError),
+            strokeAnimationSpeed: 1.7, delayBetweenStrokes: 50,
+            charDataLoader: (char, onComplete, onError) => {
+                char == "" ? undefined
+                    : loadAssetJSON(`_xiezh_w_${char}.json`).then(onComplete).catch(onError)
+            },
             onLoadCharDataError: (e) => xlog("Writer char data load failed: " + e),
             showCharacter: false,
             showOutline: isOutlineVisible,
         })
-        const setupHanzi = (hanzi) => {
+        const setOutline = (v) => {
+            (isOutlineVisible = v) ? writer.showOutline() : writer.hideOutline()
+        }
+        const setupHanzi = () => {
             writer.setCharacter(hanzi.sym);
             const pycolor = xstyle('py-color' + hanzi.pyTone);
             writer.updateColor('strokeColor', pycolor);
             writer.updateColor('highlightCompleteColor', fadeto(pycolor, xstyle('stroke-color'), 0.3));
         }
-        const resetQuiz = (hanzi) => {
+        const resetQuiz = () => {
+            setOutline(xconfig.outline);
             writer.quiz({
                 showHintAfterMisses: 2,
                 markStrokeCorrectAfterMisses: 3,
                 leniency: 1.3,
                 onComplete: () => { hanzi.audio.play() },
             })
+            if (xconfig.outlineTime) {
+                setTimeout(() => setOutline(false), xconfig.outlineTime)
+            }
         };
 
         setupClickerBtn('toggle-outline', () => {
-            isOutlineVisible = !isOutlineVisible;
-            isOutlineVisible ? writer.showOutline() : writer.hideOutline();
+            setOutline(!isOutlineVisible)
         });
-        setupClickerBtn('restart-quiz', () => writer.quiz());
+        setupClickerBtn('restart-quiz', () => resetQuiz());
         setupClickerBtn('run-animation', () => writer.animateCharacter());
 
         return {
-            reset: (hanzi) => {
-                xlog("writer reset: " + hanzi);
-                setupHanzi(hanzi);
-                resetQuiz(hanzi);
+            reset: (newHanzi) => {
+                xlog("writer reset: " + newHanzi);
+                hanzi = newHanzi;
+                setupHanzi();
+                xconfig.visible ? writer.showCharacter() : resetQuiz();
             }
         }
     })();
@@ -286,6 +346,10 @@
             xlog("xnote updateChar: " + charIdx + hanzi)
             hanziWriter.reset(hanzi);
             pinyinQuiz.reset(hanzi);
+
+            loadAssetJSON("_xiezh_freqs.json").then((freqlist) => {
+                document.getElementById("freq-display").innerText = "freq: " + freqlist.indexOf(hanzi.sym)
+            })
         }
 
         setupClickerBtn('next-character', () => {
@@ -315,6 +379,11 @@
             window.open(`plecoapi://x-callback-url/s?q=${text}`, '_blank');
         });
 
+        setupClickerBtn('change-mode', () => {
+            xnoteConfigs.next()
+            updateChar()
+        });
+
         return {
             reset: (hText, hPinyin) => {
                 xlog("xnote init: " + hText + " " + hPinyin)
@@ -337,7 +406,7 @@
         border-radius: 5px;
         background-color: var(--btn-background);
         color: var(--btn-color);
-        font-size: 14px;
+        font-size: 20px;
         cursor: pointer;
         transition: background-color 0.1s;
     }
