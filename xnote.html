@@ -32,11 +32,11 @@
 
 <div id="pinyin-quiz" style="margin-top: 20px; text-align: center;">
     <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
-        <button class="tone-btn flat-btn" data-tone="1">—</button>
-        <button class="tone-btn flat-btn" data-tone="2">/</button>
-        <button class="tone-btn flat-btn" data-tone="3">∨</button>
-        <button class="tone-btn flat-btn" data-tone="4">\</button>
-        <button class="tone-btn flat-btn" data-tone="5">n</button>
+        <button class="tone-btn flat-btn" data-tone="1"></button>
+        <button class="tone-btn flat-btn" data-tone="2"></button>
+        <button class="tone-btn flat-btn" data-tone="3"></button>
+        <button class="tone-btn flat-btn" data-tone="4"></button>
+        <button class="tone-btn flat-btn" data-tone="5"></button>
     </div>
 </div>
 
@@ -54,7 +54,7 @@
 <!-- <script src="https://unpkg.com/hanzi-writer"></script> -->
 <script src="_xiezh_hanzi-writer.min.js"></script>
 <script>
-    var xversion = "4.0"
+    var xversion = "4.1"
     var xlog = (message) => {
         const logContainer = document.getElementById("log-messages");
         logContainer.hidden = false;
@@ -113,7 +113,7 @@
     var xnoteConfigs = (() => {
         const writeHard = {
             outline: true,
-            outlineTime: 600,
+            outlineTime: 1000,
         }
         const writeEasy = {
             outline: true,
@@ -246,6 +246,7 @@
 
     var hanziWriter = (() => {
         let hanzi = undefined;
+        let onComplete = undefined;
         let isOutlineVisible = false;
         const writer = HanziWriter.create('hanzi-draw', '', {
             width: 280, height: 280, padding: 5,
@@ -279,7 +280,7 @@
                 showHintAfterMisses: 2,
                 markStrokeCorrectAfterMisses: 3,
                 leniency: 1.3,
-                onComplete: () => { hanzi.audio.play() },
+                onComplete: () => { onComplete?.() },
             })
             if (xconfig.outlineTime) {
                 setTimeout(() => setOutline(false), xconfig.outlineTime)
@@ -293,11 +294,17 @@
         setupClickerBtn('run-animation', () => writer.animateCharacter());
 
         return {
-            reset: (newHanzi) => {
-                xlog("writer reset: " + newHanzi);
-                hanzi = newHanzi;
+            reset: (hanzi_, onComplete_) => {
+                xlog("writer reset: " + hanzi_);
+                hanzi = hanzi_;
+                onComplete = onComplete_;
                 setupHanzi();
                 xconfig.visible ? writer.showCharacter() : resetQuiz();
+            },
+            forceCompletion: () => {
+                xlog("writer forceCompletion: " + hanzi);
+                writer.cancelQuiz();
+                writer.showCharacter();
             }
         }
     })();
@@ -307,28 +314,34 @@
 
     var pinyinQuiz = (() => {
         let hanzi = undefined;
+        let onSuccess = undefined;
+
+        const forEachBtn = (cb) => {
+            document.querySelectorAll('.tone-btn').forEach((btn, index) => cb(btn, index + 1))
+        }
 
         const flushButtonColors = () => {
-            document.querySelectorAll('.tone-btn').forEach(btn => {
-                btn.style.backgroundColor = '';
+            forEachBtn((btn, pyTone) => {
+                // btn.style.backgroundColor = '';
+                btn.style.backgroundColor = xstyle('py-color' + pyTone)
+                btn.onmouseover = btn.onmouseout = null
             });
         };
 
-        document.querySelectorAll('.tone-btn').forEach((btn, index) => {
+        forEachBtn((btn, pyTone) => {
             btn.addEventListener('click', errCheck(() => {
                 flushButtonColors();
-                const selectedTone = index + 1; // 1-5
-                if (selectedTone === hanzi.pyTone) {
-                    btn.style.backgroundColor = xstyle('py-color' + hanzi.pyTone)
-                    hanzi.audio.play()
+                if (pyTone === hanzi.pyTone) {
+                    onSuccess?.()
                 }
             }));
         });
 
         return {
-            reset: (newHanzi) => {
-                xlog("pinyinQuiz reset: " + newHanzi)
-                hanzi = newHanzi
+            reset: (hanzi_, onSuccess_) => {
+                xlog("pinyinQuiz reset: " + hanzi_)
+                hanzi = hanzi_
+                onSuccess = onSuccess_
                 flushButtonColors();
             }
         }
@@ -343,9 +356,14 @@
 
         const updateChar = () => {
             const hanzi = hanziArr[charIdx];
-            xlog("xnote updateChar: " + charIdx + hanzi)
-            hanziWriter.reset(hanzi);
-            pinyinQuiz.reset(hanzi);
+            xlog("xnote updateChar: " + charIdx + hanzi);
+            hanziWriter.reset(hanzi, () => {
+                hanzi.audio.play();
+            });
+            pinyinQuiz.reset(hanzi, () => {
+                hanziWriter.forceCompletion();
+                hanzi.audio.play();
+            });
 
             loadAssetJSON("_xiezh_freqs.json").then((freqlist) => {
                 document.getElementById("freq-display").innerText = "freq: " + freqlist.indexOf(hanzi.sym)
@@ -401,8 +419,9 @@
 
 <style>
     .flat-btn {
-        padding: 10px 15px;
         border: none;
+        box-shadow: none;
+        padding: 10px 15px;
         border-radius: 5px;
         background-color: var(--btn-background);
         color: var(--btn-color);
@@ -412,6 +431,8 @@
     }
 
     .flat-btn:hover {
+        border: none;
+        box-shadow: none;
         background-color: var(--btn-hover);
     }
 
