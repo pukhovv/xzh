@@ -23,8 +23,8 @@
 <div id="buttons" style="display: flex; justify-content: space-around; margin-top: 7px; font-size: 24px;">
     <button id="run-animation" class="flat-btn">写</button>
     <button id="toggle-outline" class="flat-btn">描</button>
-    <button id="next-character" class="flat-btn">换</button>
     <button id="restart-quiz" class="flat-btn">新</button>
+    <button id="next-character" class="flat-btn">换</button>
     <button id="play-full-audio" class="flat-btn">声</button>
     <button id="pleco-lookup" class="flat-btn">鱼</button>
     <button id="change-mode" class="flat-btn">设</button>
@@ -298,6 +298,7 @@
                 xlog("writer reset: " + hanzi_);
                 hanzi = hanzi_;
                 onComplete = onComplete_;
+                writer.hideCharacter(); // prevent blinking
                 setupHanzi();
                 xconfig.visible ? writer.showCharacter() : resetQuiz();
             },

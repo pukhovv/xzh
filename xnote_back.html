@@ -1,0 +1,19 @@
+<div></div>
+    <div id="buttons" style="display: flex; margin-top: 7px;">
+        <button id="pleco-lookup">🔍</button>
+    </div>
+    <div id="character-lines" style="margin-top: 7px;">
+        <div style="font-size: 64px; line-height: 1; display:inline-block;">{{text-sc}}</div>
+        <div style="font-size: 64px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
+        <div style="font-size: 24px; line-height: 1;">[{{pinyin}}]</div>
+    </div>
+  <p>{{definition}}</p>
+</div>
+
+<script>
+    document.getElementById("pleco-lookup").addEventListener('click', () => {
+        let text = "{{text-sc}}";
+        window.open(`plecoapi://x-callback-url/s?q=${text}`, '_blank');
+    });
+    document.getElementById("pleco-lookup").style.backgroundColor = document.body.style.backgroundColor;
+</script>
