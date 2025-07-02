@@ -1,8 +1,8 @@
 <div id="card-container" style="padding: 5px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
 
-<div id="character-lines" style="text-align: center; margin-top: 0px;">
-    <div style="font-size: 64px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
-    <div style="font-size: 64px; line-height: 1; font-family: 'xcard-likeandkaiti';">{{text-sc}}</div>
+<div id="hanzi-lines" style="text-align: center; margin-top: 0px;">
+    <div style="font-size: 56px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
+    <div style="font-size: 70px; line-height: 1; font-family: 'xcard-likeandkaiti';">{{text-sc}}</div>
 </div>
 
 <div style="text-align:center; margin-top: 5px">
@@ -46,7 +46,6 @@
 
 <div id="debug-log"
     style="margin-top: 100px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; font-size: 12px; color: #333; max-height: 100px; overflow-y: auto;">
-    <strong>xlog:</strong>
     <ul id="log-messages" style="list-style-type: none; padding: 0;"></ul>
 </div>
 </div>
@@ -251,7 +250,7 @@
         let onComplete = undefined;
         let isOutlineVisible = false;
         const writer = HanziWriter.create('hanzi-draw', '', {
-            width: 280, height: 280, padding: 5,
+            width: 230, height: 230, padding: 5,
             strokeColor: xstyle('stroke-color'),
             drawingColor: xstyle('stroke-color'),
             outlineColor: xstyle('outline-color'),
@@ -320,6 +319,28 @@
     })();
 
     /**********************************************************************/
+    // char display
+
+    var charDisplay = (() => {
+        return {
+            reset: (hanziArr_, completedIdx_) => {
+                const setColoredChars = (div) => {
+                    div.innerHTML = ''
+                    hanziArr_.forEach((hanzi, idx) => {
+                        const span = document.createElement('span');
+                        span.textContent = hanzi.sym;
+                        span.style.color = completedIdx_[idx] ? xstyle('py-color' + hanzi.pyTone) : xstyle('stroke-color');
+                        div.appendChild(span);
+                    });
+                }
+                for (let div of document.getElementById("hanzi-lines").children) {
+                    setColoredChars(div)
+                }
+            }
+        }
+    })();
+
+    /**********************************************************************/
     // pinyin quiz
 
     var pinyinQuiz = (() => {
@@ -362,30 +383,44 @@
 
     var xnote = (() => {
         let hanziArr = undefined;
+        let completedIdx = undefined;
         let charIdx = 0;
 
-        const updateChar = () => {
+        const nextChar = () => {
+            if (hanziArr.length > 1) {
+                charIdx = (charIdx + 1) % hanziArr.length;
+                update();
+            }
+        }
+
+        const onCharCompleted = () => {
+            const hanzi = hanziArr[charIdx];
+            completedIdx[charIdx] = true;
+            charDisplay.reset(hanziArr, completedIdx);
+            hanzi.audio.play();
+        }
+
+        const update = () => {
             const hanzi = hanziArr[charIdx];
             xlog("xnote updateChar: " + charIdx + hanzi);
             hanziWriter.reset(hanzi, () => {
-                hanzi.audio.play();
+                onCharCompleted();
             });
+            if (completedIdx[charIdx]) {
+                hanziWriter.forceCompletion()
+            }
             pinyinQuiz.reset(hanzi, () => {
+                onCharCompleted();
                 hanziWriter.forceCompletion();
-                hanzi.audio.play();
+                setTimeout(() => nextChar(), 700) // TODO: configure
             });
-
             loadAssetJSON("_xiezh_freqs.json").then((freqlist) => {
                 document.getElementById("freq-display").innerText = "freq: " + freqlist.indexOf(hanzi.sym)
             })
+            charDisplay.reset(hanziArr, completedIdx)
         }
 
-        setupClickerBtn('next-character', () => {
-            if (hanziArr.length > 1) {
-                charIdx = (charIdx + 1) % hanziArr.length;
-                updateChar();
-            }
-        });
+        setupClickerBtn('next-character', () => nextChar());
 
         setupClickerBtn('play-full-audio', () => {
             let idx = 0;
@@ -409,16 +444,17 @@
 
         setupClickerBtn('change-mode', () => {
             xnoteConfigs.next()
-            updateChar()
+            update()
         });
 
         return {
             reset: (hText, hPinyin) => {
                 xlog("xnote init: " + hText + " " + hPinyin)
                 hanziArr = HanziChar.buildChars(hText, hPinyin)
+                completedIdx = {}
                 document.getElementById('next-character').style.visibility =
                     hanziArr.length > 1 ? 'initial' : 'hidden';
-                updateChar();
+                update();
             }
         }
     })();
