@@ -1,11 +1,13 @@
-<div id="card-container" style="padding: 5px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
+<div id="card-container" style="padding: 0px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
 
-<div id="hanzi-lines" style="text-align: center; margin-top: 0px;">
+<div id="char-info" style="font-size: 18px; padding: 3px; line-height: 1;"></div>
+
+<div id="hanzi-lines" style="text-align: center; padding: 0px;">
     <div style="font-size: 56px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
     <div style="font-size: 70px; line-height: 1; font-family: 'xcard-likeandkaiti';">{{text-sc}}</div>
 </div>
 
-<div style="text-align:center; margin-top: 5px">
+<div style="text-align:center; padding: 3px">
     <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' class='grid-color' id='hanzi-draw'>
         <g id="char-grid">
             <line x1='0' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
@@ -20,7 +22,7 @@
     </svg>
 </div>
 
-<div id="buttons" style="display: flex; justify-content: space-around; margin-top: 7px; font-size: 24px;">
+<div id="buttons" style="display: flex; justify-content: space-around; padding: 5px; font-size: 24px;">
     <button id="run-animation" class="flat-btn">写</button>
     <button id="toggle-outline" class="flat-btn">描</button>
     <button id="restart-quiz" class="flat-btn">新</button>
@@ -30,8 +32,8 @@
     <button id="change-mode" class="flat-btn">设</button>
 </div>
 
-<div id="pinyin-quiz" style="margin-top: 20px; text-align: center;">
-    <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
+<div id="pinyin-quiz" style="padding: 5px; text-align: center;">
+    <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px;">
         <button class="tone-btn flat-btn" data-tone="1"></button>
         <button class="tone-btn flat-btn" data-tone="2"></button>
         <button class="tone-btn flat-btn" data-tone="3"></button>
@@ -40,9 +42,20 @@
     </div>
 </div>
 
-<div id="char-data" style="text-align: center; margin-bottom: 10px;"></div>
-<div id="freq-display" style="font-size: 16px; line-height: 1;">empty</div>
+<div id="similar-quiz"
+    style="text-align: center; padding: 5px; font-size: 32px; line-height: 1; font-family: 'xcard-kaiti'">empty
 </div>
+<style>
+    #similar-quiz {
+        white-space: pre-wrap;
+    }
+
+    #similar-quiz .ch {
+        display: inline-block;
+        cursor: pointer;
+        user-select: none;
+    }
+</style>
 
 <div id="debug-log"
     style="margin-top: 100px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; font-size: 12px; color: #333; max-height: 100px; overflow-y: auto;">
@@ -102,6 +115,16 @@
 
     var setupClickerBtn = (btnName, onClick) => {
         document.getElementById(btnName).addEventListener('click', errCheck(onClick));
+    };
+
+    var buildSpans = (div, arr, cb) => {
+        div.innerHTML = ''
+        arr.forEach((elem, idx) => {
+            const span = document.createElement('span');
+            span.textContent = elem
+            cb(span, idx)
+            div.appendChild(span);
+        });
     };
 
     /**********************************************************************/
@@ -200,6 +223,63 @@
     /**********************************************************************/
     // hanzi processing
 
+    var hanziData = (() => {
+        const data = {}
+        data.init = async () => {
+            const freqlist = await loadAssetJSON("_xiezh_freqs.json");
+            const sortKeysByStringOrder = (obj, orderStr) => {
+                const orderMap = [...orderStr].reduce((map, char, index) => (map[char] = index, map), {});
+                return Object.fromEntries(
+                    Object.entries(obj)
+                        .filter(([key]) => key.length === 1)
+                        .sort(([a], [b]) => (orderMap[a] ?? Infinity) - (orderMap[b] ?? Infinity))
+                );
+            }
+
+            let hgraph = await loadAssetJSON("_xiezh_decomp.json").then((dataString) => {
+                let hgraph = {}
+                let start = 0;
+                let end;
+
+                while ((end = dataString.indexOf(';', start)) !== -1) {
+                    let line = dataString.slice(start, end).trim()
+                    start = end + 1
+                    const [char, decomposition] = line.split(':');
+                    const [typeOfDecomposition, partsStr] = decomposition.split(/[()]/);
+                    if (char.length > 1) {
+                        continue;
+                    }
+                    hgraph[char] = {
+                        sym: char,
+                        type: typeOfDecomposition.trim(),
+                        parts: partsStr.split(',').filter((sym) => sym.length <= 1),
+                        usedin: []
+                    };
+                }
+                return hgraph
+            })
+
+            hgraph = sortKeysByStringOrder(hgraph, freqlist)
+
+            for (let sym in hgraph) {
+                let node = hgraph[sym]
+                node.parts = node.parts.map(sym => hgraph[sym]).filter((sym) => sym != undefined)
+            }
+
+            for (let sym in hgraph) {
+                let node = hgraph[sym]
+                for (let part of node.parts) {
+                    part.usedin.push(node)
+                }
+            }
+
+            data.freqlist = freqlist
+            data.hgraph = hgraph
+        };
+
+        return data
+    })()
+
     var HanziChar = class {
         constructor(sym, py) {
             this.sym = sym
@@ -240,7 +320,7 @@
             }
             return { base, tone };
         }
-    }
+    };
 
     /**********************************************************************/
     // hanzi writer
@@ -250,7 +330,7 @@
         let onComplete = undefined;
         let isOutlineVisible = false;
         const writer = HanziWriter.create('hanzi-draw', '', {
-            width: 230, height: 230, padding: 5,
+            width: 210, height: 210, padding: 5,
             strokeColor: xstyle('stroke-color'),
             drawingColor: xstyle('stroke-color'),
             outlineColor: xstyle('outline-color'),
@@ -298,7 +378,6 @@
         };
 
         setupClickerBtn('toggle-outline', () => setOutline(!isOutlineVisible));
-        setupClickerBtn('restart-quiz', () => resetQuiz());
         setupClickerBtn('run-animation', () => writer.animateCharacter());
 
         return {
@@ -314,7 +393,8 @@
                 xlog("writer forceCompletion: " + hanzi);
                 writer.cancelQuiz();
                 writer.showCharacter();
-            }
+            },
+            resetQuiz: resetQuiz
         }
     })();
 
@@ -324,18 +404,57 @@
     var charDisplay = (() => {
         return {
             reset: (hanziArr_, completedIdx_) => {
-                const setColoredChars = (div) => {
-                    div.innerHTML = ''
-                    hanziArr_.forEach((hanzi, idx) => {
-                        const span = document.createElement('span');
-                        span.textContent = hanzi.sym;
-                        span.style.color = completedIdx_[idx] ? xstyle('py-color' + hanzi.pyTone) : xstyle('stroke-color');
-                        div.appendChild(span);
-                    });
-                }
                 for (let div of document.getElementById("hanzi-lines").children) {
-                    setColoredChars(div)
+                    buildSpans(div, hanziArr_.map(hanzi => hanzi.sym), (span, idx) => {
+                        span.style.color = completedIdx_[idx]
+                            ? xstyle('py-color' + hanziArr_[idx].pyTone)
+                            : xstyle('stroke-color')
+                    })
                 }
+            }
+        }
+    })();
+
+    /**********************************************************************/
+    // similar characters quiz
+
+    var similarQuiz = (() => {
+        let onSuccess;
+
+        const rsort = (arr) => arr.sort(() => Math.random() - 0.5)
+        const getSymArr = (sym) => {
+            let node = hanziData.hgraph[sym]
+            if (node == undefined) {
+                return ""
+            }
+            let similar = node.parts
+                .map(n => n.usedin
+                    .slice(0, 6)
+                    .map(n => n.sym).filter(s => s != sym))
+                .flat()
+            similar.push(...node.usedin.map(n => n.sym).slice(4))
+            similar = rsort(similar).slice(0, 10)
+            similar.push(sym)
+            return rsort(similar)
+        }
+        return {
+            reset: (hanzi_, onSuccess_) => {
+                onSuccess = onSuccess_
+                let text = getSymArr(hanzi_.sym)
+                let div = document.getElementById("similar-quiz")
+                buildSpans(div, text, (span, idx) => {
+                    span.classList.add('ch')
+                })
+                div.addEventListener('click', (e) => {
+                    const el = e.target.closest('.ch');
+                    if (!el) { return }
+                    let correct = el.textContent == hanzi_.sym
+                    el.style.textDecoration = correct ? 'underline' : 'overline'
+                    if (correct) {
+                        el.style.color = xstyle('py-color' + hanzi_.pyTone)
+                        onSuccess?.()
+                    }
+                });
             }
         }
     })();
@@ -412,15 +531,39 @@
             pinyinQuiz.reset(hanzi, () => {
                 onCharCompleted();
                 hanziWriter.forceCompletion();
-                setTimeout(() => nextChar(), 700) // TODO: configure
+                // setTimeout(() => nextChar(), 700) // TODO: configure
             });
-            loadAssetJSON("_xiezh_freqs.json").then((freqlist) => {
-                document.getElementById("freq-display").innerText = "freq: " + freqlist.indexOf(hanzi.sym)
-            })
-            charDisplay.reset(hanziArr, completedIdx)
+            similarQuiz.reset(hanzi, () => {
+                onCharCompleted();
+            });
+            ((elem) => {
+                let node = hanziData.hgraph[hanzi.sym]
+                if (node == undefined) {
+                    elem.innerText = "no data"
+                    return
+                }
+                let fidx = hanziData.freqlist.indexOf(hanzi.sym)
+                let parts = node.parts.map(n => n.sym).join("")
+                let usedin = node.usedin.slice(0, 7)
+                    .map(n => n.sym).filter(s => {
+                        let idx = hanziData.freqlist.indexOf(s);
+                        return idx != -1 && idx < 3000 // TODO: configure
+                    })
+                    .join("")
+                elem.innerText = "" + (fidx == -1 ? "" : fidx)
+                    + " " + hanzi.sym + " / " + parts + " / " + usedin;
+            })(document.getElementById("char-info"));
         }
 
         setupClickerBtn('next-character', () => nextChar());
+
+        setupClickerBtn('restart-quiz', () => {
+            const hanzi = hanziArr[charIdx];
+            hanziWriter.resetQuiz()
+            similarQuiz.reset(hanzi, () => {
+                onCharCompleted();
+            });
+        })
 
         setupClickerBtn('play-full-audio', () => {
             let idx = 0;
@@ -459,7 +602,10 @@
         }
     })();
 
-    errCheck(() => xnote.reset("{{text-sc}}", "{{pinyin}}"))()
+    (async () => {
+        await hanziData.init()
+        errCheck(() => xnote.reset("{{text-sc}}", "{{pinyin}}"))()
+    })()
 
 </script>
 
