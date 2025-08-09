@@ -7,19 +7,28 @@
     <div style="font-size: 70px; line-height: 1; font-family: 'xcard-likeandkaiti';">{{text-sc}}</div>
 </div>
 
-<div style="text-align:center; padding: 3px">
-    <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' class='grid-color' id='hanzi-draw'>
-        <g id="char-grid">
-            <line x1='0' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
-            <line x1='100%' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
-            <line x1='50%' y1='0' x2='50%' y2='100%' stroke='var(--btn-background)' />
-            <line x1='0' y1='50%' x2='100%' y2='50%' stroke='var(--btn-background)' />
-            <line x1='0' y1='0' x2='100%' y2='0' stroke='var(--btn-background)' />
-            <line x1='0' y1='100%' x2='100%' y2='100%' stroke='var(--btn-background)' />
-            <line x1='0' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
-            <line x1='100%' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
-        </g>
-    </svg>
+<div class="container-A" style="margin: 0 auto; position: relative; width: fit-content;">
+    <div class="content-wrapper" style="display: flex; align-items: center; justify-content: center;">
+        <div style="text-align:center; padding: 3px; display: flex; align-items: center; justify-content: center;">
+            <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' class='grid-color' id='hanzi-draw'>
+                <g id="char-grid">
+                    <line x1='0' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
+                    <line x1='100%' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
+                    <line x1='50%' y1='0' x2='50%' y2='100%' stroke='var(--btn-background)' />
+                    <line x1='0' y1='50%' x2='100%' y2='50%' stroke='var(--btn-background)' />
+                    <line x1='0' y1='0' x2='100%' y2='0' stroke='var(--btn-background)' />
+                    <line x1='0' y1='100%' x2='100%' y2='100%' stroke='var(--btn-background)' />
+                    <line x1='0' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
+                    <line x1='100%' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
+                </g>
+            </svg>
+        </div>
+        <div class="button-container" style="display: flex; flex-direction: column; position: absolute; left: 100%; padding: 5px;">
+            <button id="pleco-lookup" class="flat-btn">鱼</button>
+            <button id="tatoeba-lookup" class="flat-btn">t</button>
+            <button id="change-mode" class="flat-btn">设</button>
+        </div>
+    </div>
 </div>
 
 <div id="buttons" style="display: flex; justify-content: space-around; padding: 5px; font-size: 24px;">
@@ -28,8 +37,6 @@
     <button id="restart-quiz" class="flat-btn">新</button>
     <button id="next-character" class="flat-btn">换</button>
     <button id="play-full-audio" class="flat-btn">声</button>
-    <button id="pleco-lookup" class="flat-btn">鱼</button>
-    <button id="change-mode" class="flat-btn">设</button>
 </div>
 
 <div id="pinyin-quiz" style="padding: 5px; text-align: center;">
@@ -581,8 +588,19 @@
         });
 
         setupClickerBtn('pleco-lookup', () => {
-            const text = hanziArr.reduce((a, hanzi) => a + hanzi.sym, "");
+            const text = hanziArr.map(h => h.sym).join("")
             window.open(`plecoapi://x-callback-url/s?q=${text}`, '_blank');
+        });
+
+        setupClickerBtn('tatoeba-lookup', () => {
+            const text = hanziArr.map(h => h.sym).join("")
+            const url =
+                `https://tatoeba.org/en/sentences/search?from=cmn&has_audio=&list=&native=&original=
+                &orphans=no&query=${encodeURIComponent(text)}&sort=relevance&sort_reverse=&tags=
+                &to=eng&trans_filter=limit&trans_has_audio=&trans_link=&trans_orphan=
+                &trans_to=eng&trans_unapproved=&trans_user=&unapproved=no&user=&word_count_max=&word_count_min=5`
+                    .replace(/\s+/g, '');
+            window.open(url, "blank_");
         });
 
         setupClickerBtn('change-mode', () => {
