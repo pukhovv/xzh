@@ -451,10 +451,10 @@
             div.addEventListener('click', (e) => {
                 const el = e.target.closest('.ch');
                 if (!el) { return }
-                let correct = el.textContent == hanzi_.sym
+                let correct = el.textContent == hanzi.sym
                 el.style.textDecoration = correct ? 'underline' : 'overline'
                 if (correct) {
-                    el.style.color = xstyle('py-color' + hanzi_.pyTone)
+                    el.style.color = xstyle('py-color' + hanzi.pyTone)
                     onSuccess?.()
                 }
             });

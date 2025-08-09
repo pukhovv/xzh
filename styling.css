@@ -1,0 +1,31 @@
+#controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+button {
+  font-size: 16px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+@font-face {
+  font-family: 'xcard-xingkai';
+  src: url('_xiezh_方正字迹-子实行楷简体.ttf');
+}
+
+@font-face {
+  font-family: 'xcard-like';
+  src: url('_xiezh_LikeJianJianTi-Regular.ttf');
+}
+
+@font-face {
+  font-family: 'xcard-kaiti';
+  src: url('_xiezh_AdobeKaitiStd-Regular.otf');
+}
+
+@font-face {
+  font-family: 'xcard-likeandkaiti';
+  src: url('_xiezh_LikeJianJianTiAndAdobeKaiti.ttf');
+}
