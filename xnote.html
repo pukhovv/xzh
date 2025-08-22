@@ -25,33 +25,15 @@
         </div>
         <div class="button-container"
             style="display: flex; flex-direction: column; position: absolute; left: 100%; padding: 5px;">
-            <button id="pleco-lookup" class="flat-btn">鱼</button>
-            <button id="tatoeba-lookup" class="flat-btn">t</button>
             <button id="change-mode" class="flat-btn">设</button>
+            <button id="tatoeba-lookup" class="flat-btn">句</button>
+            <button id="pleco-lookup" class="flat-btn">鱼</button>
         </div>
     </div>
 </div>
 
-<div id="buttons" style="display: flex; justify-content: space-around; padding: 5px; font-size: 24px;">
-    <button id="run-animation" class="flat-btn">写</button>
-    <button id="toggle-outline" class="flat-btn">描</button>
-    <button id="next-character" class="flat-btn">换</button>
-    <button id="play-full-audio" class="flat-btn">声</button>
-    <button id="restart-quiz" class="flat-btn">新</button>
-</div>
-
-<div id="pinyin-quiz" style="padding: 5px; text-align: center;">
-    <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px;">
-        <button class="tone-btn flat-btn" data-tone="1"></button>
-        <button class="tone-btn flat-btn" data-tone="2"></button>
-        <button class="tone-btn flat-btn" data-tone="3"></button>
-        <button class="tone-btn flat-btn" data-tone="4"></button>
-        <button class="tone-btn flat-btn" data-tone="5"></button>
-    </div>
-</div>
-
 <div id="similar-quiz"
-    style="text-align: center; padding: 5px; font-size: 32px; line-height: 1; font-family: 'xcard-kaiti'">-</div>
+    style="text-align: center; padding: 8px; font-size: 35px; line-height: 1; font-family: 'xcard-kaiti'">-</div>
 <style>
     #similar-quiz {
         white-space: pre-wrap;
@@ -63,6 +45,24 @@
         user-select: none;
     }
 </style>
+
+<div id="buttons" style="display: flex; justify-content: space-around; padding: 5px; font-size: 24px;">
+    <button id="run-animation" class="flat-btn">写</button>
+    <button id="toggle-outline" class="flat-btn">描</button>
+    <button id="next-character" class="flat-btn">换</button>
+    <button id="restart-quiz" class="flat-btn">新</button>
+    <button id="play-full-audio" class="flat-btn">声</button>
+</div>
+
+<div id="pinyin-quiz" style="padding: 5px; text-align: center;">
+    <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px;">
+        <button class="tone-btn flat-btn" data-tone="1"></button>
+        <button class="tone-btn flat-btn" data-tone="2"></button>
+        <button class="tone-btn flat-btn" data-tone="3"></button>
+        <button class="tone-btn flat-btn" data-tone="4"></button>
+        <button class="tone-btn flat-btn" data-tone="5"></button>
+    </div>
+</div>
 
 <div id="debug-log"
     style="margin-top: 100px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; font-size: 12px; color: #333; max-height: 100px; overflow-y: auto;">
@@ -91,6 +91,14 @@
         }
         return f;
     }
+    var xperfTimestamp = 0
+    var xperf = (message, reset) => {
+        let stamp = performance.now()
+        if (reset) {
+            xperfTimestamp = stamp
+        }
+        xlog("perf: " + message + ": " + ((stamp - xperfTimestamp) | 0) + "ms")
+    }
 
     (() => {
         xlog("<script> v" + xversion + " loaded=" + !!globalThis.xnoteLoaded);
@@ -104,7 +112,12 @@
         : globalThis.AnkiDroidJS ? "https://appassets.androidplatform.net"
             : ".") + "/";
 
-    var loadAssetJSON = (name) => fetch(assetPrefix + name, { cache: "force-cache" }).then((r) => r.json());
+    var loadAssetJSON = (name) => fetch(assetPrefix + name, { cache: "force-cache" })
+        .then((r) => {
+            let res = r.json();
+            xperf("asset " + name)
+            return res
+        });
 
     var xcacheGet = (prop) => {
         if (typeof prop != "string") {
@@ -141,18 +154,22 @@
 
     var xnoteConfigs = (() => {
         const writeTrue = {
+            similarQuizResetTime: 300,
         }
         const writeHard = {
             outline: true,
             outlineTime: 1000,
+            similarQuizResetTime: 300,
         }
         const writeEasy = {
             outline: true,
+            similarQuizResetTime: 300,
         }
         const noWriting = {
             visible: true,
         }
         const configs = [writeTrue, writeHard, writeEasy, noWriting]
+        configs.forEach((conf, idx) => conf.idx = idx)
 
         let configIdx = Number(xcacheGet("configIdx") ?? xcacheSet("configIdx", "0"));
         xconfig = configs[configIdx];
@@ -232,17 +249,14 @@
 
     var hanziData = (() => {
         const data = {}
-        data.fetch = async () => {
-            if (data.freqlist != undefined) {
-                return data
-            }
+        const loader = async (data) => {
             const freqlist = await loadAssetJSON("_xiezh_freqs.json");
             function sortMapKeysByStringOrder(map, orderStr) {
                 const order = Object.fromEntries([...orderStr].map((k, i) => [k, i]));
                 return new Map([...map].sort(([a], [b]) => (order[a] ?? Infinity) - (order[b] ?? Infinity)));
             }
 
-            let hgraph = await loadAssetJSON("_xiezh_decomp.json").then((dataString) => {
+            let hgraph = await loadAssetJSON("_xiezh_decomp_light.json").then((dataString) => {
                 let hgraph = new Map()
                 let start = 0;
                 let end;
@@ -250,23 +264,20 @@
                 while ((end = dataString.indexOf(';', start)) !== -1) {
                     let oldstart = start // clumsy code to make it faster
                     start = end + 1
-                    if (dataString.indexOf(":", oldstart) != oldstart + 1) {
-                        continue;
-                    }
                     let line = dataString.slice(oldstart, end).trim()
                     const [char, decomposition] = line.split(':');
                     const [typeOfDecomposition, partsStr] = decomposition.split(/[()]/);
                     hgraph.set(char, {
                         sym: char,
                         type: typeOfDecomposition.trim(),
-                        parts: partsStr.split(',').filter((sym) => sym.length <= 1),
+                        parts: partsStr.split(','),
                         usedin: []
                     });
                 }
                 return hgraph
             })
 
-            hgraph = sortMapKeysByStringOrder(hgraph, freqlist)
+            // hgraph = sortMapKeysByStringOrder(hgraph, freqlist)
 
             for (const node of hgraph.values()) {
                 node.parts = node.parts.map(sym => hgraph.get(sym)).filter((sym) => sym != undefined)
@@ -277,11 +288,20 @@
                     part.usedin.push(node)
                 }
             }
+            xperf("hanzidata initialized")
 
             data.freqlist = freqlist
             data.hgraph = hgraph
             return data
         };
+
+        let fetchPromise = undefined;
+        data.fetch = async () => {
+            if (!fetchPromise) {
+                fetchPromise = loader(data)
+            }
+            return fetchPromise
+        }
 
         return data
     })()
@@ -426,6 +446,7 @@
 
     var similarQuiz = (() => {
         let onSuccess;
+        let hanzi;
 
         const rsort = (arr) => arr.sort(() => Math.random() - 0.5)
         const getSymArr = async (sym) => {
@@ -433,37 +454,53 @@
             if (node == undefined) {
                 return ""
             }
-            let similar = node.parts
-                .map(n => n.usedin
-                    .slice(0, 6)
-                    .map(n => n.sym).filter(s => s != sym))
-                .flat()
+
+            const fn = (node, num) => {
+                return node.parts.map(part => {
+                    let res = part.usedin.slice(0, num).map(n => n.sym).filter(s => s != sym)
+                    return res.length != 0 ? res : fn(part, num / 2)
+                }).flat()
+            };
+
+            let similar = fn(node, 6)
             similar.push(...node.usedin.map(n => n.sym).slice(4))
-            similar = rsort(similar).slice(0, 10)
+
+            similar = similar.filter((sym) => sym.length == 1)
+            similar = rsort(similar).slice(0, 9)
             similar.push(sym)
             return rsort(similar)
         }
-        const setupDiv = (text, hanzi) => {
-            let div = document.getElementById("similar-quiz")
+
+        const div = document.getElementById("similar-quiz");
+        const setupDiv = (text) => {
             buildSpans(div, text, (span, idx) => {
                 span.classList.add('ch')
             })
-            div.addEventListener('click', (e) => {
-                const el = e.target.closest('.ch');
-                if (!el) { return }
-                let correct = el.textContent == hanzi.sym
-                el.style.textDecoration = correct ? 'underline' : 'overline'
-                if (correct) {
-                    el.style.color = xstyle('py-color' + hanzi.pyTone)
-                    onSuccess?.()
+        };
+
+        div.addEventListener('click', (e) => {
+            const el = e.target.closest('.ch');
+            if (!el) { return }
+            let correct = el.textContent == hanzi.sym
+            el.style.textDecoration = correct ? 'underline' : 'overline'
+            if (correct) {
+                el.style.color = xstyle('py-color' + hanzi.pyTone)
+                onSuccess?.()
+                if (xconfig.similarQuizResetTime) {
+                    setTimeout(() => similarQuiz.resetQuiz(), xconfig.similarQuizResetTime);
                 }
-            });
-        }
+            }
+        });
+
+        const resetQuiz = () => getSymArr(hanzi.sym).then(text => setupDiv(text, hanzi));
+
         return {
             reset: (hanzi_, onSuccess_) => {
                 onSuccess = onSuccess_
-                getSymArr(hanzi_.sym).then(text => setupDiv(text, hanzi_))
-            }
+                hanzi = hanzi_
+                resetQuiz()
+            },
+            resetQuiz: resetQuiz,
         }
     })();
 
@@ -513,6 +550,14 @@
         let completedIdx = undefined;
         let charIdx = 0;
 
+        const activeHanzi = () => {
+            return hanziArr[charIdx]
+        }
+
+        const activeHanziCompleted = () => {
+            return completedIdx[charIdx]
+        }
+
         const nextChar = () => {
             if (hanziArr.length > 1) {
                 charIdx = (charIdx + 1) % hanziArr.length;
@@ -520,11 +565,17 @@
             }
         }
 
+        const displayPinyin = () => { // TODO: refactor
+            document.getElementById("char-info").innerText += " / " + activeHanzi().py
+        }
+
         const onCharCompleted = () => {
-            const hanzi = hanziArr[charIdx];
+            if (!activeHanziCompleted()) {
+                displayPinyin()
+            }
             completedIdx[charIdx] = true;
             charDisplay.reset(hanziArr, completedIdx);
-            hanzi.audio.play();
+            activeHanzi().audio.play();
         }
 
         const updateCharInfo = (data, hanzi) => {
@@ -539,29 +590,32 @@
             let usedin = node.usedin.slice(0, 7)
                 .map(n => n.sym).filter(s => {
                     let idx = data.freqlist.indexOf(s);
-                    return idx != -1 && idx < 3000 // TODO: configure
+                    return idx != -1 && idx < 4000 // TODO: configure
                 })
                 .join("")
             elem.innerText = "" + (fidx == -1 ? "" : fidx)
                 + " " + hanzi.sym + " / " + parts + " / " + usedin;
+            if (activeHanziCompleted()) {
+                displayPinyin()
+            }
         }
 
         const update = () => {
-            const hanzi = hanziArr[charIdx];
+            const hanzi = activeHanzi();
             xlog("xnote updateChar: " + charIdx + hanzi);
             hanziWriter.reset(hanzi, () => {
                 onCharCompleted();
             });
-            if (completedIdx[charIdx]) {
+            if (activeHanziCompleted()) {
                 hanziWriter.forceCompletion()
             }
             pinyinQuiz.reset(hanzi, () => {
                 onCharCompleted();
                 hanziWriter.forceCompletion();
-                // setTimeout(() => nextChar(), 700) // TODO: configure
             });
             similarQuiz.reset(hanzi, () => {
                 onCharCompleted();
+                hanziWriter.forceCompletion();
             });
             hanziData.fetch().then(data => updateCharInfo(data, hanzi))
         }
@@ -569,11 +623,8 @@
         setupClickerBtn('next-character', () => nextChar());
 
         setupClickerBtn('restart-quiz', () => {
-            const hanzi = hanziArr[charIdx];
-            hanziWriter.resetQuiz()
-            similarQuiz.reset(hanzi, () => {
-                onCharCompleted();
-            });
+            hanziWriter.resetQuiz();
+            similarQuiz.resetQuiz();
         })
 
         setupClickerBtn('play-full-audio', () => {
@@ -602,13 +653,15 @@
                 `https://tatoeba.org/en/sentences/search?from=cmn&has_audio=&list=&native=&original=
                 &orphans=no&query=${encodeURIComponent(text)}&sort=relevance&sort_reverse=&tags=
                 &to=eng&trans_filter=limit&trans_has_audio=&trans_link=&trans_orphan=
-                &trans_to=eng&trans_unapproved=&trans_user=&unapproved=no&user=&word_count_max=&word_count_min=5`
+                &trans_to=eng&trans_unapproved=&trans_user=&unapproved=no&user=&word_count_max=&word_count_min=10`
                     .replace(/\s+/g, '');
             window.open(url, "blank_");
         });
 
         setupClickerBtn('change-mode', () => {
             xnoteConfigs.next()
+            document.getElementById("change-mode").innerText = xconfig.idx.toString()
+            completedIdx = {}
             update()
         });
 
@@ -625,8 +678,10 @@
     })();
 
     (async () => {
+        xperf("main routine start", true)
         hanziData.fetch()
         errCheck(() => xnote.reset("{{text-sc}}", "{{pinyin}}"))()
+        xperf("main routine finish")
     })()
 
 </script>
