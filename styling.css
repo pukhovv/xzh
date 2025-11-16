@@ -29,3 +29,8 @@ button {
   font-family: 'xcard-likeandkaiti';
   src: url('_xiezh_LikeJianJianTiAndAdobeKaiti.ttf');
 }
+
+@font-face {
+  font-family: 'xcard-xingshu';
+  src: url('_xiezh_陈继世硬笔行书.ttf');
+}
