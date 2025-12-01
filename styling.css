@@ -1,36 +1,325 @@
-#controls {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-button {
-  font-size: 16px;
-  padding: 10px 20px;
-  cursor: pointer;
-}
-
+/* Typography: custom faces and fallbacks */
 @font-face {
   font-family: 'xcard-xingkai';
   src: url('_xiezh_方正字迹-子实行楷简体.ttf');
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'xcard-like';
   src: url('_xiezh_LikeJianJianTi-Regular.ttf');
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'xcard-kaiti';
   src: url('_xiezh_AdobeKaitiStd-Regular.otf');
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'xcard-likeandkaiti';
   src: url('_xiezh_LikeJianJianTiAndAdobeKaiti.ttf');
+  font-display: swap;
 }
 
 @font-face {
   font-family: 'xcard-xingshu';
   src: url('_xiezh_陈继世硬笔行书.ttf');
+  font-display: swap;
+}
+
+:root {
+  /* Color tokens */
+  --bg: #ffffff;
+  --fg: #111213;
+  --muted: #6b7075;
+  --border: color-mix(in srgb, var(--fg) 12%, transparent);
+  --accent: #2b7fff;
+  --accent-weak: color-mix(in srgb, var(--accent) 18%, transparent);
+  --grid-color: color-mix(in srgb, var(--fg) 20%, transparent);
+
+  --btn-bg: #f2f4f6;
+  --btn-fg: var(--fg);
+  --btn-bg-hover: color-mix(in srgb, var(--btn-bg) 70%, var(--accent) 30%);
+  --btn-border: color-mix(in srgb, var(--fg) 10%, transparent);
+
+  --char-background: #ffffff;
+  --stroke-color: #000000;
+  --outline-color: #aaaaaa;
+
+  --py-color1: #e30000;
+  --py-color2: #02b31c;
+  --py-color3: #1510f0;
+  --py-color4: #8900bf;
+  --py-color5: #777777;
+
+  /* Sizing scale */
+  --radii: 0.5rem;
+  --pad-1: 0.5rem;
+  --pad-2: 1rem;
+  --pad-3: 1.5rem;
+  --gap-1: 0.5rem;
+  --gap-2: 1rem;
+  --gap-3: 1.25rem;
+
+  /* Typography scale */
+  --fs-xs: 0.9rem;
+  --fs-sm: 1rem;
+  --fs-md: 1.2rem;
+  --fs-lg: clamp(1.25rem, 3.5vw, 1.8rem);
+  --fs-xl: clamp(1.75rem, 5vw, 2.4rem);
+  --fs-xxl: clamp(2.5rem, 7.5vw, 4rem);
+
+  /* Component sizes tuned for ~1080×2400 portrait */
+  --square-size: min(60vw, 40vh);
+  /* keeps a good proportion on tall screens */
+  --rail-gap: 0.75rem;
+  --rail-btn-size: clamp(2.25rem, 7.5vw, 3rem);
+  /* ≥44dp tap target */
+  --rail-btn-font: clamp(1.1rem, 3vw, 1.35rem);
+
+  --stroke-thin: 0.075rem;
+  --stroke-mid: 0.12rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0f11;
+    --fg: #eceff1;
+    --muted: #a7adb3;
+    --border: color-mix(in srgb, var(--fg) 14%, transparent);
+    --btn-bg: #1a1c1f;
+    --btn-fg: var(--fg);
+    --btn-bg-hover: color-mix(in srgb, var(--btn-bg) 60%, var(--accent) 40%);
+    --grid-color: color-mix(in srgb, var(--fg) 22%, transparent);
+
+    --char-background: #000000;
+    --stroke-color: #ffffff;
+    --outline-color: #444444;
+
+    --py-color1: #ff8080;
+    --py-color2: #80ff80;
+    --py-color3: #8080ff;
+    --py-color4: #df80ff;
+    --py-color5: #c6c6c6;
+  }
+}
+
+/* Base layout */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif;
+  line-height: 1.25;
+}
+
+#card-container {
+  margin-inline: auto;
+  padding: var(--pad-2);
+  max-width: 92vw;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+/* Header info */
+#char-info {
+  font-size: var(--fs-sm);
+  padding: var(--pad-1) 0;
+  line-height: 1;
+  color: var(--muted);
+}
+
+/* Hanzi sample lines (two styles) */
+#hanzi-lines {
+  text-align: center;
+  padding: 0;
+  margin-block: var(--pad-1);
+}
+
+.hanzi {
+  line-height: 1;
+  letter-spacing: 0;
+  margin-block: 0.2rem;
+  font-size: clamp(3rem, 13vw, 10rem);
+}
+
+.hanzi-xingkai {
+  font-family: 'xcard-xingkai', 'xcard-like', 'xcard-kaiti', serif;
+}
+
+.hanzi-xingshu {
+  font-family: 'xcard-xingshu', 'xcard-like', 'xcard-kaiti', serif;
+}
+
+/* Drawing square + right rail */
+.container-A {
+  margin-inline: auto;
+  width: max-content;
+}
+
+.content-wrapper {
+  display: grid;
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rail-gap);
+}
+
+.draw-square {
+  width: var(--square-size);
+  height: var(--square-size);
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radii);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
+}
+
+#hanzi-draw {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#char-grid line {
+  vector-effect: non-scaling-stroke;
+  stroke: var(--grid-color);
+  stroke-width: var(--stroke-thin);
+}
+
+/* Right-side rail buttons */
+.button-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rail-gap);
+}
+
+/* Flat, finger-friendly buttons */
+.flat-btn {
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: var(--stroke-thin) solid var(--btn-border);
+  border-radius: var(--radii);
+  padding: 0.6em 0.9em;
+  font-size: var(--fs-md);
+  line-height: 1;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s ease, transform 0.05s ease, border-color 0.15s ease;
+  touch-action: manipulation;
+}
+
+.flat-btn:where(:hover, :focus-visible) {
+  background: var(--btn-bg-hover);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  outline: none;
+}
+
+.flat-btn:active {
+  transform: translateY(0.05rem);
+}
+
+/* Size the rail buttons as squares with readable glyphs */
+.button-container .flat-btn {
+  inline-size: var(--rail-btn-size);
+  block-size: var(--rail-btn-size);
+  display: grid;
+  place-items: center;
+  font-size: var(--rail-btn-font);
+  padding: 0;
+  /* square */
+}
+
+/* Similar character quiz area */
+#similar-quiz {
+  text-align: center;
+  padding: var(--pad-2) 0;
+  font-family: 'xcard-kaiti', 'xcard-likeandkaiti', 'xcard-like', serif;
+  font-size: clamp(2rem, 6.8vw, 6rem);
+  line-height: 1.1;
+  white-space: pre-wrap;
+}
+
+#similar-quiz .ch {
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.2em 0.03em;
+  border-radius: calc(var(--radii) / 1.5);
+  transition: background 0.15s ease;
+}
+
+#similar-quiz .ch:hover {
+  background: var(--accent-weak);
+}
+
+/* Main controls row */
+#buttons {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: var(--gap-2);
+  padding: var(--pad-1) 0;
+  font-size: var(--fs-lg);
+}
+
+#buttons .flat-btn {
+  min-inline-size: clamp(2.4rem, 9vw, 3.5rem);
+  min-block-size: clamp(2.4rem, 9vw, 3.5rem);
+  display: grid;
+  place-items: center;
+}
+
+/* Pinyin quiz */
+#pinyin-quiz {
+  padding: var(--pad-1) 0;
+  text-align: center;
+}
+
+#quiz-buttons {
+  display: flex;
+  justify-content: center;
+  gap: var(--gap-2);
+}
+
+.tone-btn {
+  inline-size: clamp(2.25rem, 8vw, 3rem);
+  block-size: clamp(2.25rem, 8vw, 3rem);
+  border-radius: 999rem;
+  padding: 0;
+  position: relative;
+}
+
+/* Debug log */
+#debug-log {
+  margin-top: 6rem;
+  padding: var(--pad-2);
+  background: color-mix(in srgb, var(--bg) 92%, var(--fg) 8%);
+  border: var(--stroke-thin) solid var(--border);
+  font-size: var(--fs-xs);
+  color: color-mix(in srgb, var(--fg) 85%, var(--muted) 15%);
+  max-block-size: 12rem;
+  overflow-y: auto;
+  border-radius: var(--radii);
+}
+
+#log-messages {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .flat-btn {
+    transition: none;
+  }
+
+  #card-container {
+    transition: none;
+  }
 }

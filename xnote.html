@@ -1,73 +1,61 @@
-<div id="card-container" style="padding: 0px; font-family: Arial, sans-serif; transition: all 0.3s;"></div>
+<!-- Card HTML -->
+<div id="card-container">
+    <div id="char-info">-</div>
 
-<div id="char-info" style="font-size: 18px; padding: 3px; line-height: 1;">-</div>
+    <div id="hanzi-lines">
+        <div class="hanzi hanzi-xingkai">{{text-sc}}</div>
+        <div class="hanzi hanzi-xingshu">{{text-sc}}</div>
+    </div>
 
-<div id="hanzi-lines" style="text-align: center; padding: 0px;">
-    <div style="font-size: 60px; line-height: 1; font-family: 'xcard-xingkai';">{{text-sc}}</div>
-    <div style="font-size: 60px; line-height: 1; font-family: 'xcard-xingshu';">{{text-sc}}</div>
-</div>
+    <div class="container-A">
+        <div class="content-wrapper">
+            <div class="draw-square">
+                <svg xmlns="http://www.w3.org/2000/svg" class="grid-color" id="hanzi-draw" viewBox="0 0 100 100"
+                    preserveAspectRatio="none">
+                    <g id="char-grid">
+                        <line x1="0" y1="0" x2="100" y2="100" />
+                        <line x1="100" y1="0" x2="0" y2="100" />
+                        <line x1="50" y1="0" x2="50" y2="100" />
+                        <line x1="0" y1="50" x2="100" y2="50" />
+                        <line x1="0" y1="0" x2="100" y2="0" />
+                        <line x1="0" y1="100" x2="100" y2="100" />
+                        <line x1="0" y1="0" x2="0" y2="100" />
+                        <line x1="100" y1="0" x2="100" y2="100" />
+                    </g>
+                </svg>
+            </div>
 
-<div class="container-A" style="margin: 0 auto; position: relative; width: fit-content;">
-    <div class="content-wrapper" style="display: flex; align-items: center; justify-content: center;">
-        <div style="text-align:center; padding: 3px; display: flex; align-items: center; justify-content: center;">
-            <svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%' class='grid-color' id='hanzi-draw'>
-                <g id="char-grid">
-                    <line x1='0' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
-                    <line x1='100%' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
-                    <line x1='50%' y1='0' x2='50%' y2='100%' stroke='var(--btn-background)' />
-                    <line x1='0' y1='50%' x2='100%' y2='50%' stroke='var(--btn-background)' />
-                    <line x1='0' y1='0' x2='100%' y2='0' stroke='var(--btn-background)' />
-                    <line x1='0' y1='100%' x2='100%' y2='100%' stroke='var(--btn-background)' />
-                    <line x1='0' y1='0' x2='0' y2='100%' stroke='var(--btn-background)' />
-                    <line x1='100%' y1='0' x2='100%' y2='100%' stroke='var(--btn-background)' />
-                </g>
-            </svg>
-        </div>
-        <div class="button-container"
-            style="display: flex; flex-direction: column; position: absolute; left: 100%; padding: 5px;">
-            <button id="change-mode" class="flat-btn">设</button>
-            <button id="tatoeba-lookup" class="flat-btn">句</button>
-            <button id="pleco-lookup" class="flat-btn">鱼</button>
+            <div class="button-container" aria-label="Grid actions">
+                <button id="change-mode" class="flat-btn" aria-label="Settings">设</button>
+                <button id="tatoeba-lookup" class="flat-btn" aria-label="Example sentence">句</button>
+                <button id="pleco-lookup" class="flat-btn" aria-label="Lookup in Pleco">鱼</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="similar-quiz"
-    style="text-align: center; padding: 8px; font-size: 35px; line-height: 1; font-family: 'xcard-kaiti'">-</div>
-<style>
-    #similar-quiz {
-        white-space: pre-wrap;
-    }
+    <div id="similar-quiz">-</div>
 
-    #similar-quiz .ch {
-        display: inline-block;
-        cursor: pointer;
-        user-select: none;
-    }
-</style>
-
-<div id="buttons" style="display: flex; justify-content: space-around; padding: 5px; font-size: 24px;">
-    <button id="run-animation" class="flat-btn">写</button>
-    <button id="toggle-outline" class="flat-btn">描</button>
-    <button id="next-character" class="flat-btn">换</button>
-    <button id="restart-quiz" class="flat-btn">新</button>
-    <button id="play-full-audio" class="flat-btn">声</button>
-</div>
-
-<div id="pinyin-quiz" style="padding: 5px; text-align: center;">
-    <div id="quiz-buttons" style="display: flex; justify-content: center; gap: 12px;">
-        <button class="tone-btn flat-btn" data-tone="1"></button>
-        <button class="tone-btn flat-btn" data-tone="2"></button>
-        <button class="tone-btn flat-btn" data-tone="3"></button>
-        <button class="tone-btn flat-btn" data-tone="4"></button>
-        <button class="tone-btn flat-btn" data-tone="5"></button>
+    <div id="buttons">
+        <button id="run-animation" class="flat-btn" aria-label="Write animation">写</button>
+        <button id="toggle-outline" class="flat-btn" aria-label="Toggle outline">描</button>
+        <button id="next-character" class="flat-btn" aria-label="Next character">换</button>
+        <button id="restart-quiz" class="flat-btn" aria-label="New quiz">新</button>
+        <button id="play-full-audio" class="flat-btn" aria-label="Play audio">声</button>
     </div>
-</div>
 
-<div id="debug-log"
-    style="margin-top: 100px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; font-size: 12px; color: #333; max-height: 100px; overflow-y: auto;">
-    <ul id="log-messages" style="list-style-type: none; padding: 0;"></ul>
-</div>
+    <div id="pinyin-quiz">
+        <div id="quiz-buttons">
+            <button class="tone-btn flat-btn" data-tone="1" aria-label="Tone 1"></button>
+            <button class="tone-btn flat-btn" data-tone="2" aria-label="Tone 2"></button>
+            <button class="tone-btn flat-btn" data-tone="3" aria-label="Tone 3"></button>
+            <button class="tone-btn flat-btn" data-tone="4" aria-label="Tone 4"></button>
+            <button class="tone-btn flat-btn" data-tone="5" aria-label="Neutral tone"></button>
+        </div>
+    </div>
+
+    <div id="debug-log">
+        <ul id="log-messages"></ul>
+    </div>
 </div>
 
 <!-- <script src="https://unpkg.com/hanzi-writer"></script> -->
@@ -186,47 +174,6 @@
 
     /**********************************************************************/
     // styling
-
-    ((theme) => {
-        const themeStyles = {
-            dark: {
-                'char-background': '#000000',
-                'stroke-color': '#ffffff',
-                'outline-color': '#444444',
-                'py-color1': '#ff8080',
-                'py-color2': '#80ff80',
-                'py-color3': '#8080ff',
-                'py-color4': '#df80ff',
-                'py-color5': '#c6c6c6',
-                'btn-background': '#222222',
-                'btn-color': '#ffffff',
-                'btn-hover': '#333333',
-            },
-            light: {
-                'char-background': '#ffffff',
-                'stroke-color': '#000000',
-                'outline-color': '#aaaaaa',
-                'py-color1': '#e30000',
-                'py-color2': '#02b31c',
-                'py-color3': '#1510f0',
-                'py-color4': '#8900bf',
-                'py-color5': '#777777',
-                'btn-background': '#f5f5f5',
-                'btn-color': '#000000',
-                'btn-hover': '#dddddd'
-            }
-        };
-        const commonThemeStyle = {
-            'true-color': '#00cc00',
-            'false-color': '#cc0000',
-        }
-        const n2prop = (n) => "--" + n;
-        const addStyles = (s) => Object.keys(s).forEach(key => {
-            document.documentElement.style.setProperty(n2prop(key), s[key]);
-        });
-        addStyles(commonThemeStyle);
-        addStyles(themeStyles[theme]);
-    })(window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
     var xstyle = (prop) => {
         return getComputedStyle(document.documentElement).getPropertyValue('--' + prop).trim()
@@ -356,7 +303,7 @@
         let onComplete = undefined;
         let isOutlineVisible = false;
         const writer = HanziWriter.create('hanzi-draw', '', {
-            width: 210, height: 210, padding: 5,
+            width: 100, height: 100, padding: 0,
             strokeColor: xstyle('stroke-color'),
             drawingColor: xstyle('stroke-color'),
             outlineColor: xstyle('outline-color'),
@@ -685,39 +632,3 @@
     })()
 
 </script>
-
-<style>
-    .flat-btn {
-        border: none;
-        box-shadow: none;
-        padding: 10px 15px;
-        border-radius: 5px;
-        background-color: var(--btn-background);
-        color: var(--btn-color);
-        font-size: 20px;
-        cursor: pointer;
-        transition: background-color 0.1s;
-    }
-
-    .flat-btn:hover {
-        border: none;
-        box-shadow: none;
-        background-color: var(--btn-hover);
-    }
-
-    .tone-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 16px;
-        border-radius: 5px;
-    }
-
-    .grid-color {
-        margin: 6px;
-        background-color: var(--char-background);
-        padding: 2px;
-        -webkit-box-shadow: 0px 0px 10px -5px rgba(0, 0, 0, 0.5);
-        -moz-box-shadow: 0px 0px 10px -5px rgba(0, 0, 0, 0.5);
-        box-shadow: 0px 0px 10px -5px rgba(0, 0, 0, 0.5);
-    }
-</style>
