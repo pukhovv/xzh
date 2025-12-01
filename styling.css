@@ -156,39 +156,86 @@ body {
   font-family: 'xcard-xingshu', 'xcard-like', 'xcard-kaiti', serif;
 }
 
-/* Drawing square + right rail */
+/* Make the container span full width so we can center the square */
 .container-A {
+  width: 100%;
   margin-inline: auto;
-  width: max-content;
 }
 
-.content-wrapper {
+/* Center the hub (its width equals the square width) */
+.content-wrapper.center-square {
   display: grid;
-  grid-auto-flow: column;
+  justify-content: center; /* centers by width */
   align-items: center;
-  justify-content: center;
-  gap: var(--rail-gap);
 }
 
+/* The hub is only as wide as the square; the rail is absolute and won't shift it */
+.draw-hub {
+  position: relative;
+  inline-size: var(--square-size);
+}
+
+/* Square footprint */
+.draw-slot {
+  inline-size: 100%;
+  block-size: var(--square-size);
+}
+
+/* Keep your existing .draw-square styles (background, radius, etc.) */
 .draw-square {
-  width: var(--square-size);
-  height: var(--square-size);
+  inline-size: 100%;
+  block-size: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: var(--radii);
   overflow: hidden;
   background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
 }
-
-#hanzi-draw {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
+#hanzi-draw { inline-size: 100%; block-size: 100%; display: block; }
 #char-grid line {
   vector-effect: non-scaling-stroke;
   stroke: var(--grid-color);
   stroke-width: var(--stroke-thin);
+}
+
+/* Replacement text layer */
+.draw-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
+}
+.draw-text-inner {
+  line-height: 1;
+  font-size: clamp(2.5rem, 15vw, 11rem);
+}
+
+/* Swap visibility */
+#draw-slot[data-mode="draw"] .draw-text  { display: none; }
+#draw-slot[data-mode="text"] .draw-square { display: none; }
+
+/* Sidecar rail — absolutely positioned to the right of the square */
+.button-container.rail {
+  position: absolute;
+  inset-block: 0;         /* top: 0; bottom: 0; */
+  left: 100%;
+  margin-left: var(--rail-gap);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--rail-gap);
+}
+
+/* Narrow screens: stack the rail below while keeping the square centered */
+@media (max-width: 40rem) {
+  .draw-hub {
+    inline-size: min(90vw, var(--square-size));
+  }
+  .button-container.rail {
+    position: static;
+    flex-direction: row;
+    justify-content: center;
+    margin: var(--gap-2) 0 0 0;
+  }
 }
 
 /* Right-side rail buttons */

@@ -8,30 +8,43 @@
     </div>
 
     <div class="container-A">
-        <div class="content-wrapper">
-            <div class="draw-square">
-                <svg xmlns="http://www.w3.org/2000/svg" class="grid-color" id="hanzi-draw" viewBox="0 0 100 100"
-                    preserveAspectRatio="none">
-                    <g id="char-grid">
-                        <line x1="0" y1="0" x2="100" y2="100" />
-                        <line x1="100" y1="0" x2="0" y2="100" />
-                        <line x1="50" y1="0" x2="50" y2="100" />
-                        <line x1="0" y1="50" x2="100" y2="50" />
-                        <line x1="0" y1="0" x2="100" y2="0" />
-                        <line x1="0" y1="100" x2="100" y2="100" />
-                        <line x1="0" y1="0" x2="0" y2="100" />
-                        <line x1="100" y1="0" x2="100" y2="100" />
-                    </g>
-                </svg>
-            </div>
+        <div class="content-wrapper center-square">
+            <!-- Hub: width equals the square; rail is a sidecar that doesn't affect centering -->
+            <div class="draw-hub">
+                <div id="draw-slot" class="draw-slot" data-mode="draw">
+                    <div class="draw-square">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="grid-color" id="hanzi-draw" viewBox="0 0 100 100"
+                            preserveAspectRatio="none">
+                            <g id="char-grid">
+                                <line x1="0" y1="0" x2="100" y2="100" />
+                                <line x1="100" y1="0" x2="0" y2="100" />
+                                <line x1="50" y1="0" x2="50" y2="100" />
+                                <line x1="0" y1="50" x2="100" y2="50" />
+                                <line x1="0" y1="0" x2="100" y2="0" />
+                                <line x1="0" y1="100" x2="100" y2="100" />
+                                <line x1="0" y1="0" x2="0" y2="100" />
+                                <line x1="100" y1="0" x2="100" y2="100" />
+                            </g>
+                        </svg>
+                    </div>
 
-            <div class="button-container" aria-label="Grid actions">
-                <button id="change-mode" class="flat-btn" aria-label="Settings">设</button>
-                <button id="tatoeba-lookup" class="flat-btn" aria-label="Example sentence">句</button>
-                <button id="pleco-lookup" class="flat-btn" aria-label="Lookup in Pleco">鱼</button>
+                    <!-- Replacement text layer (initially hidden in draw mode) -->
+                    <div class="draw-text" aria-hidden="true">
+                        <span id="draw-text-content" class="draw-text-inner hanzi hanzi-xingkai">{{text-sc}}</span>
+                    </div>
+                </div>
+
+                <!-- Side rail: absolutely positioned so it doesn't shift the square -->
+                <div class="button-container rail" aria-label="Grid actions">
+                    <button id="draw-toggle" class="flat-btn" aria-label="Settings">X</button>
+                    <button id="change-mode" class="flat-btn" aria-label="Settings">设</button>
+                    <button id="tatoeba-lookup" class="flat-btn" aria-label="Example sentence">句</button>
+                    <button id="pleco-lookup" class="flat-btn" aria-label="Lookup in Pleco">鱼</button>
+                </div>
             </div>
         </div>
     </div>
+
 
     <div id="similar-quiz">-</div>
 
@@ -377,7 +390,7 @@
     var charDisplay = (() => {
         return {
             reset: (hanziArr_, completedIdx_) => {
-                for (let div of document.getElementById("hanzi-lines").children) {
+                for (let div of [...document.getElementById("hanzi-lines").children, document.getElementById("draw-text-content")]) {
                     buildSpans(div, hanziArr_.map(hanzi => hanzi.sym), (span, idx) => {
                         span.style.color = completedIdx_[idx]
                             ? xstyle('py-color' + hanziArr_[idx].pyTone)
@@ -473,7 +486,7 @@
         forEachBtn((btn, pyTone) => {
             btn.addEventListener('click', errCheck(() => {
                 flushButtonColors();
-                if (pyTone === hanzi.pyTone) {
+                if (pyTone === hanzi.pyTone || pyTone === 5) {
                     onSuccess?.()
                 }
             }));
@@ -610,6 +623,21 @@
             document.getElementById("change-mode").innerText = xconfig.idx.toString()
             completedIdx = {}
             update()
+        });
+
+        const setDrawMode = (mode /* 'draw' | 'text' */) => {
+            xcacheSet("drawMode", mode)
+            const slot = document.getElementById('draw-slot');
+            slot.dataset.mode = mode;
+            // Optional: keep accessibility in sync
+            slot.querySelector('.draw-text')?.setAttribute('aria-hidden', mode === 'draw' ? 'true' : 'false');
+        }
+
+        setDrawMode(xcacheGet("drawMode") ?? xcacheSet("drawMode", "draw"))
+
+        setupClickerBtn('draw-toggle', () => {
+            const slot = document.getElementById('draw-slot');
+            setDrawMode(slot?.dataset.mode === 'text' ? 'draw' : 'text');
         });
 
         return {
