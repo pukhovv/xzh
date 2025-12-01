@@ -156,6 +156,10 @@ body {
   font-family: 'xcard-xingshu', 'xcard-like', 'xcard-kaiti', serif;
 }
 
+#hanzi-lines .hanzi, .draw-text-inner {
+  font-family: var(--hanzi-font, 'xcard-kaiti')
+}
+
 /* Make the container span full width so we can center the square */
 .container-A {
   width: 100%;

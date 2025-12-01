@@ -3,7 +3,7 @@
     <div id="char-info">-</div>
 
     <div id="hanzi-lines">
-        <div class="hanzi hanzi-xingkai">{{text-sc}}</div>
+        <div class="hanzi hanzi-xingkai">‎ </div>
         <div class="hanzi hanzi-xingshu">{{text-sc}}</div>
     </div>
 
@@ -202,6 +202,12 @@
             res += ((nt & m) * sc + (nf & m) * (1 - sc)) & m
         }
         return "#" + res.toString(16).padStart(6, "0")
+    }
+
+    var setRandomHanziFont = () => {
+        const HANZI_FONTS = ['xcard-xingkai', 'xcard-xingshu', 'xcard-kaiti', 'xcard-like', '?'];
+        const f = HANZI_FONTS[Math.floor(Math.random() * HANZI_FONTS.length)];
+        document.getElementById('card-container')?.style.setProperty('--hanzi-font', `'${f}'`);
     }
 
     /**********************************************************************/
@@ -580,6 +586,8 @@
             hanziData.fetch().then(data => updateCharInfo(data, hanzi))
         }
 
+        setRandomHanziFont()
+
         setupClickerBtn('next-character', () => nextChar());
 
         setupClickerBtn('restart-quiz', () => {
@@ -639,6 +647,9 @@
             const slot = document.getElementById('draw-slot');
             setDrawMode(slot?.dataset.mode === 'text' ? 'draw' : 'text');
         });
+
+        // Run once on load (or whenever you change card content)
+        document.addEventListener('DOMContentLoaded', setRandomHanziFont);
 
         return {
             reset: (hText, hPinyin) => {
