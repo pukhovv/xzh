@@ -4,7 +4,7 @@
 
     <div id="hanzi-lines">
         <div class="hanzi hanzi-xingkai">‎ </div>
-        <div class="hanzi hanzi-xingshu">{{text-sc}}</div>
+        <div id="hanzi-line1" class="hanzi hanzi-xingshu">{{text-sc}}</div>
     </div>
 
     <div class="container-A">
@@ -396,7 +396,7 @@
     var charDisplay = (() => {
         return {
             reset: (hanziArr_, completedIdx_) => {
-                for (let div of [...document.getElementById("hanzi-lines").children, document.getElementById("draw-text-content")]) {
+                for (let div of [document.getElementById("hanzi-line1"), document.getElementById("draw-text-content")]) {
                     buildSpans(div, hanziArr_.map(hanzi => hanzi.sym), (span, idx) => {
                         span.style.color = completedIdx_[idx]
                             ? xstyle('py-color' + hanziArr_[idx].pyTone)

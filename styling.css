@@ -17,11 +17,11 @@
   font-display: swap;
 }
 
-@font-face {
+/* @font-face {
   font-family: 'xcard-likeandkaiti';
   src: url('_xiezh_LikeJianJianTiAndAdobeKaiti.ttf');
   font-display: swap;
-}
+} */
 
 @font-face {
   font-family: 'xcard-xingshu';
@@ -145,7 +145,7 @@ body {
   line-height: 1;
   letter-spacing: 0;
   margin-block: 0.2rem;
-  font-size: clamp(3rem, 13vw, 10rem);
+  font-size: clamp(3rem, 16vw, 16rem);
 }
 
 .hanzi-xingkai {
@@ -210,7 +210,7 @@ body {
 }
 .draw-text-inner {
   line-height: 1;
-  font-size: clamp(2.5rem, 15vw, 11rem);
+  font-size: clamp(2.5rem, 16vw, 16rem);
 }
 
 /* Swap visibility */
@@ -230,7 +230,7 @@ body {
 }
 
 /* Narrow screens: stack the rail below while keeping the square centered */
-@media (max-width: 40rem) {
+/* @media (max-width: 40rem) {
   .draw-hub {
     inline-size: min(90vw, var(--square-size));
   }
@@ -240,7 +240,7 @@ body {
     justify-content: center;
     margin: var(--gap-2) 0 0 0;
   }
-}
+} */
 
 /* Right-side rail buttons */
 .button-container {
@@ -299,7 +299,7 @@ body {
   display: inline-block;
   cursor: pointer;
   user-select: none;
-  padding: 0.2em 0.03em;
+  padding: 0.1em 0.03em;
   border-radius: calc(var(--radii) / 1.5);
   transition: background 0.15s ease;
 }
