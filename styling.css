@@ -216,6 +216,10 @@ body {
 /* Swap visibility */
 #draw-slot[data-mode="draw"] .draw-text  { display: none; }
 #draw-slot[data-mode="text"] .draw-square { display: none; }
+#card-container[data-draw-mode="text"] #hanzi-lines {
+  visibility: hidden;      /* not visible, but space is preserved */
+  pointer-events: none;    /* cannot be interacted with */
+}
 
 /* Sidecar rail — absolutely positioned to the right of the square */
 .button-container.rail {

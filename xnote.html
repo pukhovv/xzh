@@ -1,5 +1,5 @@
 <!-- Card HTML -->
-<div id="card-container">
+<div id="card-container" data-draw-mode="draw">
     <div id="char-info">-</div>
 
     <div id="hanzi-lines">
@@ -639,6 +639,10 @@
             slot.dataset.mode = mode;
             // Optional: keep accessibility in sync
             slot.querySelector('.draw-text')?.setAttribute('aria-hidden', mode === 'draw' ? 'true' : 'false');
+            const root = document.getElementById('card-container');
+            root?.setAttribute('data-draw-mode', mode);
+
+            document.getElementById('hanzi-lines').setAttribute('aria-hidden', mode === 'text' ? 'true' : 'false');
         }
 
         setDrawMode(xcacheGet("drawMode") ?? xcacheSet("drawMode", "draw"))
