@@ -6,14 +6,14 @@
 }
 
 @font-face {
-  font-family: 'xcard-like';
-  src: url('_xiezh_LikeJianJianTi-Regular.ttf');
+  font-family: 'xcard-xingshu';
+  src: url('_xiezh_陈继世硬笔行书.ttf');
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'xcard-kaiti';
-  src: url('_xiezh_AdobeKaitiStd-Regular.otf');
+  font-family: 'xcard-like';
+  src: url('_xiezh_LikeJianJianTi-Regular.ttf');
   font-display: swap;
 }
 
@@ -26,6 +26,24 @@
 @font-face {
   font-family: 'xcard-xingshu';
   src: url('_xiezh_陈继世硬笔行书.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-yshi';
+  src: url('_xiezh_YShiWritten-Regular.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-sentypea';
+  src: url('_xiezh_HanyiSentyPea.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-kaiti';
+  src: url('_xiezh_AdobeKaitiStd-Regular.otf');
   font-display: swap;
 }
 

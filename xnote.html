@@ -205,7 +205,7 @@
     }
 
     var setRandomHanziFont = () => {
-        const HANZI_FONTS = ['xcard-xingkai', 'xcard-xingshu', 'xcard-kaiti', 'xcard-like', '?'];
+        const HANZI_FONTS = ['xcard-xingkai', 'xcard-xingshu', 'xcard-like', 'xcard-yshi', 'xcard-sentypea', '?'];
         const f = HANZI_FONTS[Math.floor(Math.random() * HANZI_FONTS.length)];
         document.getElementById('card-container')?.style.setProperty('--hanzi-font', `'${f}'`);
     }
