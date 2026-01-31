@@ -1,6 +1,24 @@
 /* Typography: custom faces and fallbacks */
 @font-face {
-  font-family: 'xcard-xingkai';
+  font-family: 'xcard-fzshusong';
+  src: url('_xiezh_方正书宋简体.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-fzfangsong';
+  src: url('_xiezh_方正仿宋简体.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-fzkaiti';
+  src: url('_xiezh_方正楷体简体.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-fzxingkai';
   src: url('_xiezh_方正字迹-子实行楷简体.ttf');
   font-display: swap;
 }
@@ -17,24 +35,6 @@
   font-display: swap;
 }
 
-/* @font-face {
-  font-family: 'xcard-likeandkaiti';
-  src: url('_xiezh_LikeJianJianTiAndAdobeKaiti.ttf');
-  font-display: swap;
-} */
-
-@font-face {
-  font-family: 'xcard-xingshu';
-  src: url('_xiezh_陈继世硬笔行书.ttf');
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'xcard-yshi';
-  src: url('_xiezh_YShiWritten-Regular.ttf');
-  font-display: swap;
-}
-
 @font-face {
   font-family: 'xcard-sentypea';
   src: url('_xiezh_HanyiSentyPea.ttf');
@@ -46,6 +46,14 @@
   src: url('_xiezh_AdobeKaitiStd-Regular.otf');
   font-display: swap;
 }
+
+/*
+@font-face {
+  font-family: 'xcard-yshi';
+  src: url('_xiezh_YShiWritten-Regular.ttf');
+  font-display: swap;
+}
+*/
 
 :root {
   /* Color tokens */
@@ -164,14 +172,6 @@ body {
   letter-spacing: 0;
   margin-block: 0.2rem;
   font-size: clamp(3rem, 16vw, 16rem);
-}
-
-.hanzi-xingkai {
-  font-family: 'xcard-xingkai', 'xcard-like', 'xcard-kaiti', serif;
-}
-
-.hanzi-xingshu {
-  font-family: 'xcard-xingshu', 'xcard-like', 'xcard-kaiti', serif;
 }
 
 #hanzi-lines .hanzi, .draw-text-inner {
@@ -311,7 +311,7 @@ body {
 #similar-quiz {
   text-align: center;
   padding: var(--pad-2) 0;
-  font-family: 'xcard-kaiti', 'xcard-likeandkaiti', 'xcard-like', serif;
+  font-family: 'xcard-kaiti', 'xcard-like', serif;
   font-size: clamp(2rem, 6.8vw, 6rem);
   line-height: 1.1;
   white-space: pre-wrap;

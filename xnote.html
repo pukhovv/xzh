@@ -1,10 +1,10 @@
 <!-- Card HTML -->
-<div id="card-container" data-draw-mode="draw">
+<div id="card-container" data-draw-mode="text">
     <div id="char-info">-</div>
 
     <div id="hanzi-lines">
-        <div class="hanzi hanzi-xingkai">‎ </div>
-        <div id="hanzi-line1" class="hanzi hanzi-xingshu">{{text-sc}}</div>
+        <div class="hanzi">‎ </div>
+        <div id="hanzi-line1" class="hanzi">{{text-sc}}</div>
     </div>
 
     <div class="container-A">
@@ -29,8 +29,8 @@
                     </div>
 
                     <!-- Replacement text layer (initially hidden in draw mode) -->
-                    <div class="draw-text" aria-hidden="true">
-                        <span id="draw-text-content" class="draw-text-inner hanzi hanzi-xingkai">{{text-sc}}</span>
+                    <div class="draw-text" aria-hidden="false">
+                        <span id="draw-text-content" class="draw-text-inner hanzi">{{text-sc}}</span>
                     </div>
                 </div>
 
@@ -205,7 +205,11 @@
     }
 
     var setRandomHanziFont = () => {
-        const HANZI_FONTS = ['xcard-xingkai', 'xcard-xingshu', 'xcard-like', 'xcard-yshi', 'xcard-sentypea', '?'];
+        const HANZI_FONTS = [
+            'xcard-fzshusong', 'xcard-fzfangsong', 'xcard-fzkaiti', 'xcard-fzxingkai',
+            'xcard-xingshu', 'xcard-sentypea',
+            // 'xcard-like',
+            '?'];
         const f = HANZI_FONTS[Math.floor(Math.random() * HANZI_FONTS.length)];
         document.getElementById('card-container')?.style.setProperty('--hanzi-font', `'${f}'`);
     }
@@ -645,7 +649,7 @@
             document.getElementById('hanzi-lines').setAttribute('aria-hidden', mode === 'text' ? 'true' : 'false');
         }
 
-        setDrawMode(xcacheGet("drawMode") ?? xcacheSet("drawMode", "draw"))
+        setDrawMode(xcacheGet("drawMode") ?? xcacheSet("drawMode", "text"))
 
         setupClickerBtn('draw-toggle', () => {
             const slot = document.getElementById('draw-slot');

@@ -18,9 +18,6 @@ def load_freq_list(filename):
     with open(filename, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def filter_freq_list(freq_str, anki_hanzi):
-    return ''.join(char for char in freq_str if char not in anki_hanzi)
-
 def create_coverage_plot(freq_list, anki_hanzi, limit=3000):
     cumulative_found = []
     count = 0
@@ -53,7 +50,8 @@ def create_coverage_plot(freq_list, anki_hanzi, limit=3000):
 
 anki_hanzi, unique = extract_anki_hanzi(sys.argv[1])
 freq_list = load_freq_list('freqs.json')
-filtered = filter_freq_list(freq_list, anki_hanzi)
+filtered = ''.join(char for char in freq_list if char not in anki_hanzi)
+known = ''.join(char for char in freq_list if char in anki_hanzi)
 missing = ''.join(char for char in anki_hanzi if char in freq_list and char not in unique)
 
 cumulative_found = create_coverage_plot(freq_list, anki_hanzi, 3000)
@@ -71,3 +69,4 @@ print(f"Coverage: {found/total*100:.1f}%")
 print(f"Missing: {missing}")
 to_print = 500
 print(f"Next {to_print}: {filtered[:to_print]}")
+print(f"Vocab: {known}")
