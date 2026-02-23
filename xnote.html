@@ -36,8 +36,9 @@
 
                 <!-- Side rail: absolutely positioned so it doesn't shift the square -->
                 <div class="button-container rail" aria-label="Grid actions">
-                    <button id="draw-toggle" class="flat-btn" aria-label="Settings">X</button>
+                    <button id="sound-toggle" class="flat-btn" aria-label="Settings">声</button>
                     <button id="change-mode" class="flat-btn" aria-label="Settings">设</button>
+                    <button id="draw-toggle" class="flat-btn" aria-label="Settings">X</button>
                     <button id="tatoeba-lookup" class="flat-btn" aria-label="Example sentence">句</button>
                     <button id="pleco-lookup" class="flat-btn" aria-label="Lookup in Pleco">鱼</button>
                 </div>
@@ -207,11 +208,13 @@
     var setRandomHanziFont = () => {
         const HANZI_FONTS = [
             'xcard-fzshusong', 'xcard-fzfangsong', 'xcard-fzkaiti', 'xcard-fzxingkai',
-            'xcard-xingshu', 'xcard-sentypea',
+            'xcard-chenjixingshu', 'xcard-sentypea',
+            'xcard-mbanquetpprc',
             // 'xcard-like',
             '?'];
         const f = HANZI_FONTS[Math.floor(Math.random() * HANZI_FONTS.length)];
         document.getElementById('card-container')?.style.setProperty('--hanzi-font', `'${f}'`);
+        xlog("font: " + f)
     }
 
     /**********************************************************************/
@@ -545,7 +548,9 @@
             }
             completedIdx[charIdx] = true;
             charDisplay.reset(hanziArr, completedIdx);
-            activeHanzi().audio.play();
+            if (xcacheGet("soundOn") == "on") {
+                activeHanzi().audio.play();
+            }
         }
 
         const updateCharInfo = (data, hanzi) => {
@@ -654,6 +659,12 @@
         setupClickerBtn('draw-toggle', () => {
             const slot = document.getElementById('draw-slot');
             setDrawMode(slot?.dataset.mode === 'text' ? 'draw' : 'text');
+        });
+
+        xcacheGet("soundOn") ?? xcacheSet("soundOn", "on")
+
+        setupClickerBtn('sound-toggle', () => {
+            xcacheSet("soundOn", xcacheGet("soundOn") == "on" ? "off" : "on")
         });
 
         // Run once on load (or whenever you change card content)

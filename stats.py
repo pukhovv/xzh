@@ -7,7 +7,7 @@ def extract_anki_hanzi(filename):
     hanziu = set()
     with open(filename, 'r', encoding='utf-8') as f:
         for line in f:
-            if line.strip():
+            if line[0] != '#' and line.strip():
                 chars = line.split('[')[0].strip()
                 hanzi.update(char for char in chars)
                 if len(chars) == 1:
@@ -48,11 +48,12 @@ def create_coverage_plot(freq_list, anki_hanzi, limit=3000):
     
     return cumulative_found
 
-anki_hanzi, unique = extract_anki_hanzi(sys.argv[1])
-freq_list = load_freq_list('freqs.json')
+anki_hanzi, unique = extract_anki_hanzi(sys.argv[2])
+freq_list = load_freq_list(sys.argv[1])
 filtered = ''.join(char for char in freq_list if char not in anki_hanzi)
 known = ''.join(char for char in freq_list if char in anki_hanzi)
 missing = ''.join(char for char in anki_hanzi if char in freq_list and char not in unique)
+rare = ''.join(char for char in anki_hanzi if char not in freq_list)
 
 cumulative_found = create_coverage_plot(freq_list, anki_hanzi, 3000)
 
@@ -70,3 +71,4 @@ print(f"Missing: {missing}")
 to_print = 500
 print(f"Next {to_print}: {filtered[:to_print]}")
 print(f"Vocab: {known}")
+print(f"Rare: {rare}")

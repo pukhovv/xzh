@@ -24,8 +24,14 @@
 }
 
 @font-face {
-  font-family: 'xcard-xingshu';
+  font-family: 'xcard-chenjixingshu';
   src: url('_xiezh_陈继世硬笔行书.ttf');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'xcard-mbanquetpprc';
+  src: url('_xiezh_mbanquetpprc.ttf');
   font-display: swap;
 }
 
@@ -311,7 +317,7 @@ body {
 #similar-quiz {
   text-align: center;
   padding: var(--pad-2) 0;
-  font-family: 'xcard-kaiti', 'xcard-like', serif;
+  font-family: 'xcard-fzfangsong', 'xcard-like', serif;
   font-size: clamp(2rem, 6.8vw, 6rem);
   line-height: 1.1;
   white-space: pre-wrap;
