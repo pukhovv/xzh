@@ -62,6 +62,7 @@
 */
 
 :root {
+  --ui-scale: clamp(1, calc(100cqw / 1080), 1.25);
   /* Color tokens */
   --bg: #ffffff;
   --fg: #111213;
@@ -96,8 +97,8 @@
   --gap-3: 1.25rem;
 
   /* Typography scale */
-  --fs-xs: 0.9rem;
-  --fs-sm: 1rem;
+  --fs-xs: clamp(0.85rem, 1.6cqw, 1.05rem);
+  --fs-sm: clamp(1rem, 4cqw, 2.5rem);
   --fs-md: 1.2rem;
   --fs-lg: clamp(1.25rem, 3.5vw, 1.8rem);
   --fs-xl: clamp(1.75rem, 5vw, 2.4rem);
@@ -107,9 +108,9 @@
   --square-size: min(60vw, 40vh);
   /* keeps a good proportion on tall screens */
   --rail-gap: 0.75rem;
-  --rail-btn-size: clamp(2.25rem, 7.5vw, 3rem);
+  --rail-btn-size: clamp(2.5rem, 6cqw, 3.5rem);
   /* ≥44dp tap target */
-  --rail-btn-font: clamp(1.1rem, 3vw, 1.35rem);
+  --rail-btn-font: clamp(1rem, 2.5cqw, 1.4rem);
 
   --stroke-thin: 0.075rem;
   --stroke-mid: 0.12rem;
@@ -147,14 +148,15 @@ body {
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
   line-height: 1.25;
 }
 
 #card-container {
   margin-inline: auto;
   padding: var(--pad-2);
-  max-width: 92vw;
+  max-width: 48rem;
+  container-type: inline-size;
   transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -230,11 +232,11 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
+  // background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
 }
 .draw-text-inner {
   line-height: 1;
-  font-size: clamp(2.5rem, 16vw, 16rem);
+  font-size: clamp(2.5rem, 18vw, 16rem);
 }
 
 /* Swap visibility */
@@ -318,7 +320,7 @@ body {
   text-align: center;
   padding: var(--pad-2) 0;
   font-family: 'xcard-fzfangsong', 'xcard-like', serif;
-  font-size: clamp(2rem, 6.8vw, 6rem);
+  font-size: clamp(2rem, calc(100cqw / 9.8), 10rem);
   line-height: 1.1;
   white-space: pre-wrap;
 }
@@ -347,8 +349,8 @@ body {
 }
 
 #buttons .flat-btn {
-  min-inline-size: clamp(2.4rem, 9vw, 3.5rem);
-  min-block-size: clamp(2.4rem, 9vw, 3.5rem);
+  min-inline-size: clamp(2.6rem, 7cqw, 4rem);
+  min-block-size: clamp(2.6rem, 7cqw, 4rem);
   display: grid;
   place-items: center;
 }
@@ -366,8 +368,8 @@ body {
 }
 
 .tone-btn {
-  inline-size: clamp(2.25rem, 8vw, 3rem);
-  block-size: clamp(2.25rem, 8vw, 3rem);
+  inline-size: clamp(2.25rem, 9vw, 3rem);
+  block-size: clamp(2.25rem, 9vw, 3rem);
   border-radius: 999rem;
   padding: 0;
   position: relative;
