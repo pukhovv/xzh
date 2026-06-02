@@ -76,12 +76,16 @@
 <script src="_xiezh_hanzi-writer.min.js"></script>
 <script>
     var xversion = "4.1"
+    var XLOG_MAX = 50;
     var xlog = (message) => {
         const logContainer = document.getElementById("log-messages");
         logContainer.hidden = false;
         const logEntry = document.createElement("li");
         logEntry.textContent = message;
         logContainer.appendChild(logEntry);
+        while (logContainer.children.length > XLOG_MAX) {
+            logContainer.removeChild(logContainer.firstChild);
+        }
     }
     var errCheck = (f) => {
         return (...args) => {
@@ -91,7 +95,6 @@
                 throw e;
             }
         }
-        return f;
     }
     var xperfTimestamp = 0
     var xperf = (message, reset) => {
@@ -104,8 +107,11 @@
 
     (() => {
         xlog("<script> v" + xversion + " loaded=" + !!globalThis.xnoteLoaded);
-        window.onerror = (message, source, lineno, colno, error) => {
-            xlog("window.onerror: " + message + " " + source + " " + lineno + " " + colno + " " + error);
+        if (!globalThis.xnoteScriptInit) {
+            globalThis.xnoteScriptInit = true;
+            window.onerror = (message, source, lineno, colno, error) => {
+                xlog("window.onerror: " + message + " " + source + " " + lineno + " " + colno + " " + error);
+            }
         }
         globalThis.xnoteLoaded = true;
     })();
@@ -189,9 +195,21 @@
     /**********************************************************************/
     // styling
 
-    var xstyle = (prop) => {
-        return getComputedStyle(document.documentElement).getPropertyValue('--' + prop).trim()
-    }
+    var xstyleCache = (() => {
+        var s = getComputedStyle(document.documentElement);
+        var c = {};
+        var keys = ['stroke-color','outline-color','char-background',
+                    'py-color1','py-color2','py-color3','py-color4','py-color5'];
+        keys.forEach(function(k) { c[k] = s.getPropertyValue('--' + k).trim(); });
+        c.get = function(prop) {
+            if (!(prop in c)) {
+                c[prop] = getComputedStyle(document.documentElement).getPropertyValue('--' + prop).trim();
+            }
+            return c[prop];
+        };
+        return c;
+    })();
+    var xstyle = (prop) => xstyleCache.get(prop);
 
     var fadeto = (cf, ct, sc) => {
         const s2n = (s) => parseInt(s.substr(1), 16);
@@ -220,64 +238,68 @@
     /**********************************************************************/
     // hanzi processing
 
-    var hanziData = (() => {
-        const data = {}
-        const loader = async (data) => {
-            const freqlist = await loadAssetJSON("_xiezh_freqs.json");
-            function sortMapKeysByStringOrder(map, orderStr) {
-                const order = Object.fromEntries([...orderStr].map((k, i) => [k, i]));
-                return new Map([...map].sort(([a], [b]) => (order[a] ?? Infinity) - (order[b] ?? Infinity)));
-            }
-
-            let hgraph = await loadAssetJSON("_xiezh_decomp_light.json").then((dataString) => {
-                let hgraph = new Map()
-                let start = 0;
-                let end;
-
-                while ((end = dataString.indexOf(';', start)) !== -1) {
-                    let oldstart = start // clumsy code to make it faster
-                    start = end + 1
-                    let line = dataString.slice(oldstart, end).trim()
-                    const [char, decomposition] = line.split(':');
-                    const [typeOfDecomposition, partsStr] = decomposition.split(/[()]/);
-                    hgraph.set(char, {
-                        sym: char,
-                        type: typeOfDecomposition.trim(),
-                        parts: partsStr.split(','),
-                        usedin: []
-                    });
+    var hanziData = globalThis._xiezh_hanziData;
+    if (!hanziData) {
+        hanziData = (() => {
+            const data = {}
+            const loader = async (data) => {
+                const freqlist = await loadAssetJSON("_xiezh_freqs.json");
+                function sortMapKeysByStringOrder(map, orderStr) {
+                    const order = Object.fromEntries([...orderStr].map((k, i) => [k, i]));
+                    return new Map([...map].sort(([a], [b]) => (order[a] ?? Infinity) - (order[b] ?? Infinity)));
                 }
-                return hgraph
-            })
 
-            // hgraph = sortMapKeysByStringOrder(hgraph, freqlist)
+                let hgraph = await loadAssetJSON("_xiezh_decomp_light.json").then((dataString) => {
+                    let hgraph = new Map()
+                    let start = 0;
+                    let end;
 
-            for (const node of hgraph.values()) {
-                node.parts = node.parts.map(sym => hgraph.get(sym)).filter((sym) => sym != undefined)
-            }
+                    while ((end = dataString.indexOf(';', start)) !== -1) {
+                        let oldstart = start // clumsy code to make it faster
+                        start = end + 1
+                        let line = dataString.slice(oldstart, end).trim()
+                        const [char, decomposition] = line.split(':');
+                        const [typeOfDecomposition, partsStr] = decomposition.split(/[()]/);
+                        hgraph.set(char, {
+                            sym: char,
+                            type: typeOfDecomposition.trim(),
+                            parts: partsStr.split(','),
+                            usedin: []
+                        });
+                    }
+                    return hgraph
+                })
 
-            for (const node of hgraph.values()) {
-                for (let part of node.parts) {
-                    part.usedin.push(node)
+                // hgraph = sortMapKeysByStringOrder(hgraph, freqlist)
+
+                for (const node of hgraph.values()) {
+                    node.parts = node.parts.map(sym => hgraph.get(sym)).filter((sym) => sym != undefined)
                 }
-            }
-            xperf("hanzidata initialized")
 
-            data.freqlist = freqlist
-            data.hgraph = hgraph
+                for (const node of hgraph.values()) {
+                    for (let part of node.parts) {
+                        part.usedin.push(node)
+                    }
+                }
+                xperf("hanzidata initialized")
+
+                data.freqlist = freqlist
+                data.hgraph = hgraph
+                return data
+            };
+
+            let fetchPromise = undefined;
+            data.fetch = async () => {
+                if (!fetchPromise) {
+                    fetchPromise = loader(data)
+                }
+                return fetchPromise
+            }
+
             return data
-        };
-
-        let fetchPromise = undefined;
-        data.fetch = async () => {
-            if (!fetchPromise) {
-                fetchPromise = loader(data)
-            }
-            return fetchPromise
-        }
-
-        return data
-    })()
+        })()
+        globalThis._xiezh_hanziData = hanziData;
+    }
 
     var HanziChar = class {
         constructor(sym, py) {
@@ -328,6 +350,7 @@
         let hanzi = undefined;
         let onComplete = undefined;
         let isOutlineVisible = false;
+        let xoutlineTimer = 0;
         const writer = HanziWriter.create('hanzi-draw', '', {
             width: 100, height: 100, padding: 0,
             strokeColor: xstyle('stroke-color'),
@@ -372,7 +395,8 @@
                 onMistake: handleMistake,
             })
             if (xconfig.outlineTime) {
-                setTimeout(() => setOutline(false), xconfig.outlineTime)
+                clearTimeout(xoutlineTimer);
+                xoutlineTimer = setTimeout(() => setOutline(false), xconfig.outlineTime)
             }
         };
 
@@ -420,6 +444,7 @@
     var similarQuiz = (() => {
         let onSuccess;
         let hanzi;
+        let xautoResetTimer = 0;
 
         const rsort = (arr) => arr.sort(() => Math.random() - 0.5)
         const getSymArr = async (sym) => {
@@ -436,7 +461,7 @@
             };
 
             let similar = fn(node, 6)
-            similar.push(...node.usedin.map(n => n.sym).slice(4))
+            similar.push(...node.usedin.slice(4).map(n => n.sym))
 
             similar = similar.filter((sym) => sym.length == 1)
             similar = rsort(similar).slice(0, 9)
@@ -460,7 +485,8 @@
                 el.style.color = xstyle('py-color' + hanzi.pyTone)
                 onSuccess?.()
                 if (xconfig.similarQuizResetTime) {
-                    setTimeout(() => similarQuiz.resetQuiz(), xconfig.similarQuizResetTime);
+                    clearTimeout(xautoResetTimer);
+                    xautoResetTimer = setTimeout(() => similarQuiz.resetQuiz(), xconfig.similarQuizResetTime);
                 }
             }
         });
@@ -484,15 +510,22 @@
         let hanzi = undefined;
         let onSuccess = undefined;
 
+        var xtoneColors = [
+            null,
+            xstyle('py-color1'),
+            xstyle('py-color2'),
+            xstyle('py-color3'),
+            xstyle('py-color4'),
+            xstyle('py-color5'),
+        ];
+
         const forEachBtn = (cb) => {
             document.querySelectorAll('.tone-btn').forEach((btn, index) => cb(btn, index + 1))
         }
 
         const flushButtonColors = () => {
             forEachBtn((btn, pyTone) => {
-                // btn.style.backgroundColor = '';
-                btn.style.backgroundColor = xstyle('py-color' + pyTone)
-                btn.onmouseover = btn.onmouseout = null
+                btn.style.backgroundColor = xtoneColors[pyTone];
             });
         };
 
@@ -646,11 +679,9 @@
             xcacheSet("drawMode", mode)
             const slot = document.getElementById('draw-slot');
             slot.dataset.mode = mode;
-            // Optional: keep accessibility in sync
             slot.querySelector('.draw-text')?.setAttribute('aria-hidden', mode === 'draw' ? 'true' : 'false');
             const root = document.getElementById('card-container');
             root?.setAttribute('data-draw-mode', mode);
-
             document.getElementById('hanzi-lines').setAttribute('aria-hidden', mode === 'text' ? 'true' : 'false');
         }
 
@@ -675,6 +706,7 @@
                 xlog("xnote init: " + hText + " " + hPinyin)
                 hanziArr = HanziChar.buildChars(hText, hPinyin)
                 completedIdx = {}
+                charIdx = 0;
                 document.getElementById('next-character').style.visibility =
                     hanziArr.length > 1 ? 'initial' : 'hidden';
                 update();
