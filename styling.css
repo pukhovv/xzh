@@ -107,9 +107,11 @@
   /* Component sizes tuned for ~1080×2400 portrait */
   --square-size: min(60vw, 40vh);
   /* keeps a good proportion on tall screens */
-  --rail-gap: 0.75rem;
+  --rail-gap: 0.35rem;
+  --rail-btn-size: 3rem;  /* fallback for browsers without cqw */
   --rail-btn-size: clamp(2.5rem, 6cqw, 3.5rem);
   /* ≥44dp tap target */
+  --rail-btn-font: 1.2rem;  /* fallback */
   --rail-btn-font: clamp(1rem, 2.5cqw, 1.4rem);
 
   --stroke-thin: 0.075rem;
@@ -157,7 +159,6 @@ body {
   padding: var(--pad-2);
   max-width: 48rem;
   container-type: inline-size;
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 /* Header info */
@@ -179,7 +180,8 @@ body {
   line-height: 1;
   letter-spacing: 0;
   margin-block: 0.2rem;
-  font-size: clamp(3rem, 16vw, 16rem);
+  font-size: clamp(3rem, 16vw, 12rem);
+  white-space: nowrap;
 }
 
 #hanzi-lines .hanzi, .draw-text-inner {
@@ -190,6 +192,7 @@ body {
 .container-A {
   width: 100%;
   margin-inline: auto;
+  padding-bottom: 2.5rem;
 }
 
 /* Center the hub (its width equals the square width) */
@@ -217,7 +220,7 @@ body {
   block-size: 100%;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
+  background: var(--bg);
 }
 #hanzi-draw { inline-size: 100%; block-size: 100%; display: block; }
 #char-grid line {
@@ -232,11 +235,10 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  // background: color-mix(in srgb, var(--bg) 100%, var(--fg) 0%);
 }
 .draw-text-inner {
   line-height: 1;
-  font-size: clamp(2.5rem, 18vw, 16rem);
+  font-size: clamp(2.5rem, 18vw, 12rem);
 }
 
 /* Swap visibility */
@@ -250,12 +252,12 @@ body {
 /* Sidecar rail — absolutely positioned to the right of the square */
 .button-container.rail {
   position: absolute;
-  inset-block: 0;         /* top: 0; bottom: 0; */
+  top: 50%;
+  transform: translateY(-50%);
   left: 100%;
   margin-left: var(--rail-gap);
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: var(--rail-gap);
 }
 
@@ -308,11 +310,11 @@ body {
 .button-container .flat-btn {
   inline-size: var(--rail-btn-size);
   block-size: var(--rail-btn-size);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--rail-btn-font);
   padding: 0;
-  /* square */
 }
 
 /* Similar character quiz area */
@@ -344,35 +346,35 @@ body {
   justify-content: space-evenly;
   align-items: center;
   gap: var(--gap-2);
-  padding: var(--pad-1) 0;
+  padding: var(--pad-1) 0 0 0;
   font-size: var(--fs-lg);
 }
 
 #buttons .flat-btn {
   min-inline-size: clamp(2.6rem, 7cqw, 4rem);
   min-block-size: clamp(2.6rem, 7cqw, 4rem);
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Pinyin quiz */
 #pinyin-quiz {
-  padding: var(--pad-1) 0;
+  padding: 0 0;
   text-align: center;
 }
 
 #quiz-buttons {
   display: flex;
   justify-content: center;
-  gap: var(--gap-2);
+  gap: 0.5rem;
 }
 
 .tone-btn {
-  inline-size: clamp(2.25rem, 9vw, 3rem);
-  block-size: clamp(2.25rem, 9vw, 3rem);
-  border-radius: 999rem;
+  inline-size: clamp(3rem, 10vw, 3.8rem);
+  block-size: clamp(3rem, 10vw, 3.8rem);
+  border-radius: var(--radii);
   padding: 0;
-  position: relative;
 }
 
 /* Debug log */
@@ -392,6 +394,17 @@ body {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+/* Active character subtle hint */
+#hanzi-line1 span.ch-active, #draw-text-content span.ch-active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 0.2rem;
+}
+
+/* Similar quiz tap feedback */
+#similar-quiz .ch:active {
+  background: var(--accent-weak);
 }
 
 /* Respect reduced motion */
