@@ -627,6 +627,14 @@
             pinyinQuiz.reset(hanzi, () => {
                 onCharCompleted();
                 hanziWriter.forceCompletion();
+                if (hanziArr.length > 1) {
+                    var inDrawMode = document.getElementById('draw-slot').dataset.mode === 'draw';
+                    if (inDrawMode) {
+                        setTimeout(() => nextChar(), 700);
+                    } else {
+                        nextChar();
+                    }
+                }
             });
             similarQuiz.reset(hanzi, () => {
                 onCharCompleted();

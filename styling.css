@@ -107,7 +107,8 @@
   /* Component sizes tuned for ~1080×2400 portrait */
   --square-size: min(60vw, 40vh);
   /* keeps a good proportion on tall screens */
-  --rail-gap: 0.35rem;
+  --rail-gap: 0.75rem;
+  --rail-gap: 0.75rem;
   --rail-btn-size: 3rem;  /* fallback for browsers without cqw */
   --rail-btn-size: clamp(2.5rem, 6cqw, 3.5rem);
   /* ≥44dp tap target */
@@ -258,7 +259,7 @@ body {
   margin-left: var(--rail-gap);
   display: flex;
   flex-direction: column;
-  gap: var(--rail-gap);
+  gap: 0;
 }
 
 /* Narrow screens: stack the rail below while keeping the square centered */
@@ -278,7 +279,6 @@ body {
 .button-container {
   display: flex;
   flex-direction: column;
-  gap: var(--rail-gap);
 }
 
 /* Flat, finger-friendly buttons */
