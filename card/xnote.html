@@ -249,7 +249,7 @@
                     return new Map([...map].sort(([a], [b]) => (order[a] ?? Infinity) - (order[b] ?? Infinity)));
                 }
 
-                let hgraph = await loadAssetJSON("_xiezh_decomp_light.json").then((dataString) => {
+                let hgraph = await loadAssetJSON("_xiezh_graph.json").then((dataString) => {
                     let hgraph = new Map()
                     let start = 0;
                     let end;
@@ -732,6 +732,13 @@
     (async () => {
         xperf("main routine start", true)
         hanziData.fetch()
+        // Preload sentence DB (cached on globalThis for back card on AnkiDroid)
+        if (!globalThis._xiezh_sentsDb) {
+            loadAssetJSON("_xiezh_sents.json").then(function(db) {
+                globalThis._xiezh_sentsDb = db;
+                xperf("sents loaded")
+            }).catch(function() {});
+        }
         errCheck(() => xnote.reset("{{text-sc}}", "{{pinyin}}"))()
         xperf("main routine finish")
     })()

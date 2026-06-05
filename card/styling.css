@@ -407,6 +407,47 @@ body {
   background: var(--accent-weak);
 }
 
+/* Back-card popular compounds */
+#xiezh-compounds {
+  display: none;
+  margin-top: 1.0rem;
+  margin-bottom: 0.4rem;
+  font-size: 1.4rem;
+  line-height: 1.4;
+  color: var(--muted);
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Back-card example sentences */
+#xiezh-sentences {
+  display: none;
+  margin-top: 1.8rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+  padding: 0 1rem;
+}
+
+.xiezh-sentence {
+  margin-bottom: 0.5rem;
+  padding: 0.3rem 0.25rem;
+  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--accent-weak); /* cascade: color-mix() fallback */
+  /* font-family: 'xcard-fzfangsong', serif; */
+  font-size: 1.6rem;
+  line-height: 1.55;
+}
+
+.xiezh-sent-match {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .flat-btn {

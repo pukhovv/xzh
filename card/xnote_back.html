@@ -1,0 +1,61 @@
+<div style="text-align:center;">
+    <div id="buttons" style="display:flex; justify-content:center; margin-top:1.5rem;">
+        <button id="pleco-lookup" style="font-size:1.2rem; background:var(--btn-bg); color:var(--btn-fg); border:var(--stroke-thin) solid var(--btn-border); border-radius:var(--radii); padding:0.4em 0.7em; cursor:pointer;">&#x1F50D;</button>
+    </div>
+    <div id="character-lines" style="margin-top:1.5rem;">
+        <div style="font-size:48px;line-height:1;font-family:'xcard-kaiti';margin-bottom:0.3rem;">{{text-sc}} | {{text-tc}}</div>
+        <div style="font-size:64px;line-height:1;font-family:'xcard-mbanquetpprc';margin-bottom:0.3rem;">{{text-sc}}</div>
+        <div style="font-size:28px;line-height:1.2;">[ {{pinyin}} ]</div>
+    </div>
+    <div id="xiezh-compounds"></div>
+    <div id="xiezh-sentences"></div>
+    <p style="font-size:1.15rem;line-height:1.5;margin-top:1.2rem;max-width:24rem;margin-left:auto;margin-right:auto;">{{definition}}</p>
+</div>
+
+<script>
+    (function() {
+        var db = globalThis._xiezh_sentsDb;
+        if (!db) return;
+        var text = "{{text-sc}}".trim();
+        if (!text) return;
+        var ids = (db.c && db.c[text]) || (db.w && db.w[text]);
+        if (!ids || !ids.length) return;
+
+        var el = document.getElementById("xiezh-sentences");
+        el.style.display = "block";
+        var matchClass = "xiezh-sent-match";
+        for (var i = 0; i < Math.min(ids.length, 4); i++) {
+            var div = document.createElement("div");
+            div.className = "xiezh-sentence";
+            var sent = db.s[ids[i]];
+            div.addEventListener('click', (function(s) {
+                return function() { window.open("plecoapi://x-callback-url/s?q=" + encodeURIComponent(s), "_blank"); };
+            })(sent));
+            var parts = sent.split(text);
+            for (var j = 0; j < parts.length; j++) {
+                if (j > 0) {
+                    var span = document.createElement("span");
+                    span.className = matchClass;
+                    span.textContent = text;
+                    div.appendChild(span);
+                }
+                div.appendChild(document.createTextNode(parts[j]));
+            }
+            el.appendChild(div);
+        }
+        // Show popular compounds
+        var cmp = db.cmp && db.cmp[text];
+        if (cmp && cmp.length) {
+            var cmpDiv = document.getElementById("xiezh-compounds");
+            cmpDiv.textContent = cmp.join(" · ");
+            cmpDiv.style.display = "block";
+        }
+    })();
+
+    document.getElementById("pleco-lookup").addEventListener('click', function() {
+        var text = "{{text-sc}}";
+        window.open("plecoapi://x-callback-url/s?q=" + text, "_blank");
+    });
+    var bg = getComputedStyle(document.body).backgroundColor;
+    document.getElementById("pleco-lookup").style.backgroundColor = bg;
+</script>
