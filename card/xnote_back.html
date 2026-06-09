@@ -13,12 +13,28 @@
 </div>
 
 <script>
+    function decodePinyin(py) {
+        var toneMap = {'\u0304':1,'\u0301':2,'\u030C':3,'\u0300':4};
+        var tone = 5, base = '';
+        for (var i = 0; i < py.normalize('NFD').length; i++) {
+            var ch = py.normalize('NFD')[i];
+            if (toneMap[ch]) { tone = toneMap[ch]; }
+            else if (!ch.match(/[\u0300-\u036f]/)) { base += ch; }
+        }
+        return {base: base, tone: tone};
+    }
     (function() {
         var db = globalThis._xiezh_sentsDb;
         if (!db) return;
         var text = "{{text-sc}}".trim();
         if (!text) return;
-        var ids = (db.c && db.c[text]) || (db.w && db.w[text]);
+        var pinyin = "{{pinyin}}".trim();
+        var key = text;
+        if (pinyin && text.length === 1) {
+            var dec = decodePinyin(pinyin);
+            key = text + ':' + dec.base + dec.tone;
+        }
+        var ids = (db.c && db.c[key]) || (db.c && db.c[text]) || (db.w && db.w[text]);
         if (!ids || !ids.length) return;
 
         var el = document.getElementById("xiezh-sentences");
