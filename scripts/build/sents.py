@@ -1,4 +1,4 @@
-import json, os, re, sys, time, gzip as gz
+import json, os, re, sys, time, gzip as gz, random
 from collections import defaultdict
 
 import jieba
@@ -137,7 +137,9 @@ t0 = time.time()
 with open(os.path.join(build, "words.json")) as f:
     wlist = json.load(f)
 with open(os.path.join(build, "chars.json")) as f:
-    clist = json.load(f)
+    chardata = json.load(f)
+clist = chardata["chars"]
+freqlist = chardata["freqs"]
 clist_set = set(clist)
 with open(os.path.join(build, "cedict.json")) as f:
     cedict_data = json.load(f)
@@ -259,6 +261,10 @@ print(f"  dedup removed: {drm}")
 
 diversify(w_idx, uniq, cedict_py)
 
+random.seed(42)
+for v in w_idx.values():
+    random.shuffle(v)
+
 print("  pre-segmenting for c_idx...")
 uniq_segs = [list(jieba.cut(s)) for s in uniq]
 
@@ -282,12 +288,26 @@ for i, s in enumerate(uniq):
                     c_idx[c + ":" + syl].add(i)
 
 c_idx = {k: sorted(list(v))[:MAX_PER + 2] for k, v in c_idx.items()}
+for v in c_idx.values():
+    random.shuffle(v)
 
 cmp_out = {c: char_cmp[c]["compounds"] for c in clist_set if c in char_cmp}
 
-out = {"s": uniq, "w": w_idx, "c": c_idx, "cmp": cmp_out}
+wf = {w: i for i, w in enumerate(wlist)}
+cf = {c: i for i, c in enumerate(freqlist)}
+w_out = {}
+for w, sids in w_idx.items():
+    w_out[w] = {"r": wf.get(w, -1), "s": sids}
+c_out = {}
+for k, sids in c_idx.items():
+    if ':' in k:
+        c_out[k] = {"s": sids}
+    else:
+        c_out[k] = {"r": cf.get(k, -1), "s": sids}
+
+out = {"s": uniq, "w": w_out, "c": c_out, "cmp": cmp_out}
 os.makedirs(res, exist_ok=True)
-op = os.path.join(res, "_xiezh_sents.json")
+op = os.path.join(res, "_xiezh_db.json")
 with open(op, 'w') as f:
     json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
 sz = os.path.getsize(op)

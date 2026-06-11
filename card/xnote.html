@@ -75,7 +75,6 @@
 <!-- <script src="https://unpkg.com/hanzi-writer"></script> -->
 <script src="_xiezh_hanzi-writer.min.js"></script>
 <script>
-    var xversion = "4.1"
     var XLOG_MAX = 50;
     var xlog = (message) => {
         const logContainer = document.getElementById("log-messages");
@@ -106,7 +105,7 @@
     }
 
     (() => {
-        xlog("<script> v" + xversion + " loaded=" + !!globalThis.xnoteLoaded);
+        xlog("<script>" + " loaded(persistent)=" + !!globalThis.xnoteLoaded);
         if (!globalThis.xnoteScriptInit) {
             globalThis.xnoteScriptInit = true;
             window.onerror = (message, source, lineno, colno, error) => {
@@ -243,12 +242,6 @@
         hanziData = (() => {
             const data = {}
             const loader = async (data) => {
-                const freqlist = await loadAssetJSON("_xiezh_freqs.json");
-                function sortMapKeysByStringOrder(map, orderStr) {
-                    const order = Object.fromEntries([...orderStr].map((k, i) => [k, i]));
-                    return new Map([...map].sort(([a], [b]) => (order[a] ?? Infinity) - (order[b] ?? Infinity)));
-                }
-
                 let hgraph = await loadAssetJSON("_xiezh_graph.json").then((dataString) => {
                     let hgraph = new Map()
                     let start = 0;
@@ -270,8 +263,6 @@
                     return hgraph
                 })
 
-                // hgraph = sortMapKeysByStringOrder(hgraph, freqlist)
-
                 for (const node of hgraph.values()) {
                     node.parts = node.parts.map(sym => hgraph.get(sym)).filter((sym) => sym != undefined)
                 }
@@ -283,7 +274,6 @@
                 }
                 xperf("hanzidata initialized")
 
-                data.freqlist = freqlist
                 data.hgraph = hgraph
                 return data
             };
@@ -593,15 +583,30 @@
                 elem.innerText = "no data"
                 return
             }
-            let fidx = data.freqlist.indexOf(hanzi.sym)
+            var cdb = globalThis._xiezh_db && globalThis._xiezh_db.c;
+            var fidx = -1;
+            if (cdb) {
+                var ce = cdb[hanzi.sym];
+                if (ce && ce.r != null && ce.r >= 0) fidx = ce.r;
+            }
             let parts = node.parts.map(n => n.sym).join("")
             let usedin = node.usedin.slice(0, 7)
                 .map(n => n.sym).filter(s => {
-                    let idx = data.freqlist.indexOf(s);
-                    return idx != -1 && idx < 4000 // TODO: configure
+                    if (!cdb) return false;
+                    var e = cdb[s];
+                    return e && e.r != null && e.r >= 0 && e.r < 4000;
                 })
                 .join("")
-            elem.innerText = "" + (fidx == -1 ? "" : fidx)
+            var wrank = "";
+            var db = globalThis._xiezh_db;
+            if (db && db.w) {
+                var wtext = "{{text-sc}}".trim();
+                var w = db.w[wtext];
+                if (w && w.r != null && w.r >= 0) {
+                    wrank = "" + (w.r + 1) + " · ";
+                }
+            }
+            elem.innerText = wrank + (fidx == -1 ? "" : fidx)
                 + " " + hanzi.sym + " / " + parts + " / " + usedin;
             if (activeHanziCompleted()) {
                 displayPinyin()
@@ -725,6 +730,9 @@
                 document.getElementById('next-character').style.visibility =
                     hanziArr.length > 1 ? 'initial' : 'hidden';
                 update();
+            },
+            refreshInfo: () => {
+                hanziData.fetch().then(data => updateCharInfo(data, activeHanzi()))
             }
         }
     })();
@@ -733,10 +741,11 @@
         xperf("main routine start", true)
         hanziData.fetch()
         // Preload sentence DB (cached on globalThis for back card on AnkiDroid)
-        if (!globalThis._xiezh_sentsDb) {
-            loadAssetJSON("_xiezh_sents.json").then(function(db) {
-                globalThis._xiezh_sentsDb = db;
-                xperf("sents loaded")
+        if (!globalThis._xiezh_db) {
+            loadAssetJSON("_xiezh_db.json").then(function(db) {
+                globalThis._xiezh_db = db;
+                errCheck(() => xnote.refreshInfo())()
+                xperf("db loaded")
             }).catch(function() {});
         }
         errCheck(() => xnote.reset("{{text-sc}}", "{{pinyin}}"))()

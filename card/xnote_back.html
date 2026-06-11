@@ -24,7 +24,7 @@
         return {base: base, tone: tone};
     }
     (function() {
-        var db = globalThis._xiezh_sentsDb;
+        var db = globalThis._xiezh_db;
         if (!db) return;
         var text = "{{text-sc}}".trim();
         if (!text) return;
@@ -34,8 +34,9 @@
             var dec = decodePinyin(pinyin);
             key = text + ':' + dec.base + dec.tone;
         }
-        var ids = (db.c && db.c[key]) || (db.c && db.c[text]) || (db.w && db.w[text]);
-        if (!ids || !ids.length) return;
+        var entry = (db.c && db.c[key]) || (db.c && db.c[text]) || (db.w && db.w[text]);
+        if (!entry || !entry.s || !entry.s.length) return;
+        var ids = entry.s;
 
         var el = document.getElementById("xiezh-sentences");
         el.style.display = "block";

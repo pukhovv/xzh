@@ -82,6 +82,13 @@ def is_noise(w):
 def is_garbage(word, wcd):
     return '\ufffd' in word or (len(word) > 1 and wcd < WCD_THRESH)
 
+def is_trans(word, pmap):
+    if len(word) < 2:
+        return False
+    if word in pmap:
+        return False
+    return sum(1 for c in word if c in TRANS) / len(word) >= 0.5
+
 def parse_wf(path):
     r = []
     with open(path, "r", encoding=ENCODING, errors="replace") as f:
@@ -119,6 +126,9 @@ dset = os.path.join(build, "dset")
 wf = os.path.join(dset, "SUBTLEX-CH-WF")
 chrf = os.path.join(dset, "SUBTLEX-CH-CHR")
 
+with open(os.path.join(build, "cedict.json")) as f:
+    pmap = json.load(f)["pinyin"]
+
 raw = parse_wf(wf)
 clean = []
 noise_n = 0
@@ -131,12 +141,15 @@ print(f"raw={len(raw)} noise={noise_n} non_noise={len(clean)}")
 
 filtered = []
 garbage_n = 0
+trans_n = 0
 for w, cnt, wcd in clean:
     if is_garbage(w, wcd):
         garbage_n += 1
+    elif is_trans(w, pmap):
+        trans_n += 1
     else:
         filtered.append((w, cnt))
-print(f"garbage={garbage_n} clean={len(filtered)}")
+print(f"garbage={garbage_n} trans={trans_n} clean={len(filtered)}")
 
 words = filtered[:TARGET_WORDS]
 word_chars = set()
@@ -158,6 +171,7 @@ wlist = [w for w, _ in words]
 with open(os.path.join(build, "words.json"), "w", encoding="utf-8") as f:
     json.dump(wlist, f, ensure_ascii=False)
 clist = "".join(selected)
+raw_freqs = "".join(all_chars)
 with open(os.path.join(build, "chars.json"), "w", encoding="utf-8") as f:
-    json.dump(clist, f, ensure_ascii=False)
-print(f"wrote words={len(wlist)} chars={len(clist)}")
+    json.dump({"chars": clist, "freqs": raw_freqs}, f, ensure_ascii=False)
+print(f"wrote words={len(wlist)} chars={len(clist)} freqs={len(raw_freqs)}")
