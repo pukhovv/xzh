@@ -242,29 +242,19 @@
         hanziData = (() => {
             const data = {}
             const loader = async (data) => {
-                let hgraph = await loadAssetJSON("_xiezh_graph.json").then((dataString) => {
-                    let hgraph = new Map()
-                    let start = 0;
-                    let end;
-
-                    while ((end = dataString.indexOf(';', start)) !== -1) {
-                        let oldstart = start // clumsy code to make it faster
-                        start = end + 1
-                        let line = dataString.slice(oldstart, end).trim()
-                        const [char, decomposition] = line.split(':');
-                        const [typeOfDecomposition, partsStr] = decomposition.split(/[()]/);
-                        hgraph.set(char, {
-                            sym: char,
-                            type: typeOfDecomposition.trim(),
-                            parts: partsStr.split(','),
-                            usedin: []
-                        });
-                    }
-                    return hgraph
-                })
+                let raw = await loadAssetJSON("_xiezh_graph.json");
+                let hgraph = new Map();
+                for (const [sym, rel, parts] of raw) {
+                    hgraph.set(sym, {
+                        sym: sym,
+                        type: rel.trim(),
+                        parts: parts,
+                        usedin: []
+                    });
+                }
 
                 for (const node of hgraph.values()) {
-                    node.parts = node.parts.map(sym => hgraph.get(sym)).filter((sym) => sym != undefined)
+                    node.parts = node.parts.map(sym => hgraph.get(sym)).filter((sym) =>     sym !== undefined)
                 }
 
                 for (const node of hgraph.values()) {

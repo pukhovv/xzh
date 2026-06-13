@@ -1,7 +1,8 @@
-import json, os, re, sys
+import json, re, sys
+from pathlib import Path
 
-def parse_entries(data):
-    entries = {}
+def parse_entries(data: str) -> dict:
+    entries: dict = {}
     pat = re.compile(r'([^:]+):([^\(]*)\(([^)]*)\)')
     for entry in re.split(r'[;\n]', data):
         entry = entry.strip()
@@ -14,7 +15,7 @@ def parse_entries(data):
                             'comps': [c.strip() for c in comps.split(',')]}
     return entries
 
-def filter_reachable(data, roots):
+def filter_reachable(data: dict, roots: list[str]) -> dict:
     ref = set()
     queue = list(roots)
     while queue:
@@ -27,7 +28,7 @@ def filter_reachable(data, roots):
                 queue.append(comp)
     return {k: data[k] for k in ref}
 
-def sort_by_freq(data, freq_list):
+def sort_by_freq(data: dict, freq_list: list[str]) -> dict:
     rank = {c: i for i, c in enumerate(freq_list)}
     def key_fn(k):
         return rank.get(k, float('inf'))
@@ -42,26 +43,21 @@ def sort_by_freq(data, freq_list):
         out[key] = {'key': key, 'rel': e['rel'], 'comps': cc + nc}
     return out
 
-def dump(data, path):
+def dump(data: dict, path: str) -> None:
+    out = [[e['key'], e['rel'], e['comps']] for e in data.values()]
     with open(path, 'w', encoding='utf-8') as f:
-        entries = []
-        f.write('"')
-        for key, e in data.items():
-            comps = ','.join(e['comps'])
-            entries.append(f"{key}:{e['rel']}({comps})")
-        f.write(';'.join(entries))
-        f.write('"')
+        json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
 
-build = sys.argv[1]
-dset = os.path.join(build, "dset")
-res = os.path.join(build, "res")
+build = Path(sys.argv[1])
+dset = build / "dset"
+res = build / "res"
 
-decomp_path = os.path.join(dset, "cjk-decomp-0.4.0.txt")
-freqs_path = os.path.join(res, "_xiezh_freqs.json")
+decomp_path = dset / "cjk-decomp-0.4.0.txt"
+freqs_path = build / "freqs.json"
 
-freqlist = list(json.load(open(freqs_path, 'r', encoding='utf-8')))
+freqlist = list(json.loads(freqs_path.read_text(encoding='utf-8')))
 
-with open(decomp_path, 'r', encoding='utf-8') as f:
+with decomp_path.open('r', encoding='utf-8') as f:
     raw = f.read()
 
 entries = parse_entries(raw)
@@ -71,7 +67,7 @@ filtered = filter_reachable(entries, freqlist)
 filtered = sort_by_freq(filtered, freqlist)
 print(f"reachable: {len(filtered)}")
 
-os.makedirs(res, exist_ok=True)
-out = os.path.join(res, "_xiezh_graph.json")
-dump(filtered, out)
-print(f"wrote graph: {os.path.getsize(out)/1024:.0f}K")
+res.mkdir(parents=True, exist_ok=True)
+out = res / "_xiezh_graph.json"
+dump(filtered, str(out))
+print(f"wrote graph: {out.stat().st_size / 1024:.0f}K")

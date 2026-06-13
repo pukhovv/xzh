@@ -108,7 +108,6 @@
   --square-size: min(60vw, 40vh);
   /* keeps a good proportion on tall screens */
   --rail-gap: 0.75rem;
-  --rail-gap: 0.75rem;
   --rail-btn-size: 3rem;  /* fallback for browsers without cqw */
   --rail-btn-size: clamp(2.5rem, 6cqw, 3.5rem);
   /* ≥44dp tap target */
@@ -436,8 +435,7 @@ body {
 .xiezh-sentence {
   margin-bottom: 0.5rem;
   padding: 0.3rem 0.25rem;
-  border-left: 2px solid var(--accent);
-  border-left: 2px solid var(--accent-weak); /* cascade: color-mix() fallback */
+  border-left: 2px solid var(--accent-weak);
   /* font-family: 'xcard-fzfangsong', serif; */
   font-size: 1.6rem;
   line-height: 1.55;

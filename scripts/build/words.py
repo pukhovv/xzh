@@ -1,4 +1,6 @@
-import json, os, re, sys
+import json, re, sys
+from pathlib import Path
+from common import TRANS, parse_chr
 
 TARGET_WORDS = 20000
 TARGET_CHARS = 4000
@@ -22,10 +24,6 @@ LEX = {
     "双方", "双重", "两位数", "两手", "两回事", "加倍", "减半", "三分之一",
     "一无所知", "二话不说", "三思", "四面八方", "四起", "四处", "五颜六色",
 }
-
-TRANS = set("斯尔尼卡莉艾莱蒂瑞娜妮玛莎琳弗乔迪奥洛"
-    "曼伯佩詹森埃塔卢兹逊翰娅姬茜黛柯沃伊姆"
-    "萨芭啡芬冈狄杜罕穆韦丘芙朱梅")
 
 WCD_THRESH = 30
 
@@ -108,28 +106,16 @@ def parse_wf(path):
             r.append((word, count, wcd))
     return r
 
-def parse_chr(path):
-    chars = []
-    with open(path, "r", encoding=ENCODING, errors="replace") as f:
-        for i, line in enumerate(f):
-            if i < 3:
-                continue
-            parts = line.strip().split("\t")
-            if parts and parts[0]:
-                c = parts[0].strip()
-                if c and len(c) == 1 and '\ufffd' not in c:
-                    chars.append(c)
-    return chars
 
-build = sys.argv[1]
-dset = os.path.join(build, "dset")
-wf = os.path.join(dset, "SUBTLEX-CH-WF")
-chrf = os.path.join(dset, "SUBTLEX-CH-CHR")
+build = Path(sys.argv[1])
+dset = build / "dset"
+wf = dset / "SUBTLEX-CH-WF"
+chrf = dset / "SUBTLEX-CH-CHR"
 
-with open(os.path.join(build, "cedict.json")) as f:
+with (build / "cedict.json").open() as f:
     pmap = json.load(f)["pinyin"]
 
-raw = parse_wf(wf)
+raw = parse_wf(str(wf))
 clean = []
 noise_n = 0
 for w, cnt, wcd in raw:
@@ -157,7 +143,7 @@ for w, _ in words:
     word_chars.update(w)
 print(f"words={len(words)} word_chars={len(word_chars)}")
 
-all_chars = parse_chr(chrf)
+all_chars = parse_chr(str(chrf))
 selected = []
 for c in all_chars:
     if c in word_chars:
@@ -166,12 +152,12 @@ for c in all_chars:
             break
 print(f"selected_chars={len(selected)}")
 
-os.makedirs(build, exist_ok=True)
+build.mkdir(parents=True, exist_ok=True)
 wlist = [w for w, _ in words]
-with open(os.path.join(build, "words.json"), "w", encoding="utf-8") as f:
+with (build / "words.json").open("w", encoding="utf-8") as f:
     json.dump(wlist, f, ensure_ascii=False)
 clist = "".join(selected)
 raw_freqs = "".join(all_chars)
-with open(os.path.join(build, "chars.json"), "w", encoding="utf-8") as f:
+with (build / "chars.json").open("w", encoding="utf-8") as f:
     json.dump({"chars": clist, "freqs": raw_freqs}, f, ensure_ascii=False)
 print(f"wrote words={len(wlist)} chars={len(clist)} freqs={len(raw_freqs)}")

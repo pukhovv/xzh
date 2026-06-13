@@ -1,19 +1,20 @@
-import json, os, re, sys, time, gzip as gz, random
+import json, re, sys, time, gzip as gz, random
 from collections import defaultdict
+from pathlib import Path
 
 import jieba
 jieba.setLogLevel(20)
+
+from common import TRANS
 
 MAX_PER = 4
 MIN_CJK, MAX_CJK = 6, 20
 A, B = 50, 0.3
 LOG_INTERVAL = 500000
-TOTAL = 16316804
 
 LATIN = re.compile(r'[a-zA-Z0-9@#$%^&*(){}\[\]<>]')
 DIA_START = re.compile(r'^[\-\—\–\'\"]')
 DIA_END = re.compile(r'[：:]$')
-TRANS = set("斯尔尼卡莉艾莱蒂瑞娜妮玛莎琳弗乔迪奥洛曼伯佩詹森埃塔卢兹逊翰娅姬茜黛柯沃伊姆萨芭啡芬冈狄杜罕穆韦丘芙朱梅")
 MDOT = re.compile(r'[·・]')
 TJUNK = re.compile(r'[，,；;]+$')
 
@@ -28,10 +29,10 @@ REPLACEMENT = '\ufffd'
 DIGITS = re.compile(r'[\d０-９]')
 SUBTITLE_META = re.compile(r'人人影视|本字幕')
 
-def ccjk(t):
+def ccjk(t: str) -> str:
     return re.sub(r'[^\u4e00-\u9fff]', '', t)
 
-def has_trans(t, n=3):
+def has_trans(t: str, n: int = 3) -> bool:
     cur = 0
     for c in t:
         if c in TRANS:
@@ -41,11 +42,11 @@ def has_trans(t, n=3):
             cur = 0
     return False
 
-def trans_ratio(t):
+def trans_ratio(t: str) -> float:
     if not t: return 0.0
     return sum(1 for c in t if c in TRANS) / len(t)
 
-def is_good(text, allowed):
+def is_good(text: str, allowed: set[str]) -> bool:
     if DIA_START.search(text) or DIA_END.search(text): return False
     if LATIN.search(text): return False
     if MDOT.search(text): return False
@@ -68,12 +69,12 @@ def is_good(text, allowed):
     if trans_ratio(cj) > 0.5: return False
     return all(ch in allowed for ch in cj)
 
-def base_syl(py):
+def base_syl(py: str) -> str:
     if len(py) >= 2 and py[-1] == '5' and py[-2].isdigit():
         return py[:-1]
     return py
 
-def classify(sent, tc, cedict_py, seg=None):
+def classify(sent: str, tc: str, cedict_py: dict, seg: list[str] | None = None) -> str | None:
     if seg is None:
         seg = list(jieba.cut(sent))
     readings = set()
@@ -89,7 +90,7 @@ def classify(sent, tc, cedict_py, seg=None):
                     readings.add(base_syl(syls[p]))
     return list(readings)[0] if len(readings) == 1 else None
 
-def diversify(w_idx, pool, cedict_py):
+def diversify(w_idx: dict, pool: list[str], pool_segs: list[list[str]], cedict_py: dict) -> None:
     duoyin = {w for w, pys in cedict_py.items() if len(w) == 1 and len(pys) > 1}
     print(f"  duoyin: {len(duoyin)}")
     n = 0
@@ -97,10 +98,12 @@ def diversify(w_idx, pool, cedict_py):
         if c not in duoyin or len(sids) < 2: continue
         rs = defaultdict(list)
         for sid in sids:
-            rs[classify(pool[sid], c, cedict_py)].append(sid)
+            rs[classify(pool[sid], c, cedict_py, pool_segs[sid])].append(sid)
         if len(rs) <= 1: continue
         new = []
-        lists = [rs[r] for r in sorted(k for k in rs if k is not None) if rs[r]]
+        def _sk(k):
+            return (0, k) if k is not None else (1, "")
+        lists = [rs[r] for r in sorted((k for k in rs), key=_sk) if rs[r]]
         ml = max(len(l) for l in lists)
         for i in range(ml):
             for l in lists:
@@ -110,7 +113,7 @@ def diversify(w_idx, pool, cedict_py):
             n += 1
     print(f"  re-ranked: {n}")
 
-def dedup(sents):
+def dedup(sents: list[str]) -> list[str]:
     if len(sents) <= 1: return sents
     def bg(s):
         cj = ccjk(s)
@@ -129,19 +132,19 @@ def dedup(sents):
         if not dup: kept.append(s)
     return kept
 
-build = sys.argv[1]
-dset = os.path.join(build, "dset")
-res = os.path.join(build, "res")
+build = Path(sys.argv[1])
+dset = build / "dset"
+res = build / "res"
 t0 = time.time()
 
-with open(os.path.join(build, "words.json")) as f:
+with (build / "words.json").open() as f:
     wlist = json.load(f)
-with open(os.path.join(build, "chars.json")) as f:
+with (build / "chars.json").open() as f:
     chardata = json.load(f)
 clist = chardata["chars"]
 freqlist = chardata["freqs"]
 clist_set = set(clist)
-with open(os.path.join(build, "cedict.json")) as f:
+with (build / "cedict.json").open() as f:
     cedict_data = json.load(f)
 cedict_py = cedict_data["pinyin"]
 char_cmp = cedict_data["compounds"]
@@ -158,6 +161,7 @@ bias = {c for c, info in char_cmp.items() if info.get("standalone_ratio", 0) >= 
 print(f"standalone bias: {len(bias)}")
 
 pool = []
+pool_segs = []
 wm = defaultdict(list)
 pending = set(range(len(wlist)))
 pmax = {i: mx(i) for i in pending}
@@ -165,7 +169,7 @@ pmax = {i: mx(i) for i in pending}
 # Collect all good sentences during phase 1 for phase 2 reuse
 sub_extras = []
 
-opus = os.path.join(dset, "zh_cn.txt.gz")
+opus = dset / "zh_cn.txt.gz"
 print("\nphase 1...")
 lines = 0
 
@@ -175,8 +179,7 @@ with gz.open(opus, 'rt', encoding='utf-8', errors='replace') as f:
         if lines % LOG_INTERVAL == 0:
             t = time.time() - t0
             r = lines / t
-            eta = (TOTAL - lines) / r if r > 0 else 0
-            print(f"  {lines/1e6:.1f}M pool={len(pool)} pending={len(pending)} {t/60:.0f}m eta={eta/60:.0f}m")
+            print(f"  {lines/1e6:.1f}M pool={len(pool)} pending={len(pending)} {t/60:.0f}m")
         if not pending:
             print(f"  done at {lines}")
             break
@@ -192,9 +195,10 @@ with gz.open(opus, 'rt', encoding='utf-8', errors='replace') as f:
             continue
         sid = len(pool)
         pool.append(text)
+        pool_segs.append(seg)
         na = 0
         mp = {w: wp[w] for w in matched}
-        for w in matched:
+        for w in sorted(matched, key=lambda w: wp[w]):
             wi = wp[w]
             if wi not in pending: continue
             ok = all(mp[mw] <= pmax[wi] for mw in mp)
@@ -205,33 +209,37 @@ with gz.open(opus, 'rt', encoding='utf-8', errors='replace') as f:
             na += 1
         if na == 0:
             pool.pop()
+            pool_segs.pop()
             sub_extras.append(text)
 
 if pending:
     print(f"\n  phase 1 done: {len(pending)} uncovered ({len(sub_extras)} extras)")
     print("  phase 2: substring...")
     rem = {wlist[i] for i in pending}
+    rem_sorted = sorted(rem, key=lambda w: wp.get(w, len(wlist)))
     for text in sub_extras:
         if not rem: break
         found = False
-        for w in list(rem):
+        for w in rem_sorted:
+            if w not in rem:
+                continue
             if w in text:
                 if not found:
-                    sid = len(pool); pool.append(text); found = True
+                    sid = len(pool); pool.append(text); pool_segs.append(list(jieba.cut(text))); found = True
                 wm[w].append(sid)
                 if len(wm[w]) >= MAX_PER:
                     rem.discard(w); pending.discard(wp[w])
     print(f"    done: {len(rem)} still uncovered")
 
 sneed = {w for w in bias if w in wm and len(wm[w]) >= 2}
-for w in list(sneed):
-    if any(w in list(jieba.cut(pool[sid])) for sid in wm[w]):
+for w in sorted(sneed, key=lambda w: wp.get(w, len(wlist))):
+    if any(w in pool_segs[sid] for sid in wm[w]):
         sneed.discard(w)
 if sneed:
     print(f"\n  phase 3: standalone bias {len(sneed)}")
-    for w in list(sneed):
+    for w in sorted(sneed, key=lambda w: wp.get(w, len(wlist))):
         for sid, s in enumerate(pool):
-            if sid not in wm[w] and w in list(jieba.cut(s)):
+            if sid not in wm[w] and w in pool_segs[sid]:
                 wm[w].append(sid); sneed.discard(w); break
 
 print("\nindices...")
@@ -243,6 +251,9 @@ for i, s in enumerate(pool):
         seen[s] = len(uniq); uniq.append(s)
     otn[i] = seen[s]
 print(f"  sents: {len(pool)} -> {len(uniq)} unique")
+
+print("  pre-segmenting uniq...")
+uniq_segs = [list(jieba.cut(s)) for s in uniq]
 
 w_idx = {}
 drm = 0
@@ -259,14 +270,11 @@ for w, sids in wm.items():
     w_idx[w] = [sti[s] for s in ds][:MAX_PER]
 print(f"  dedup removed: {drm}")
 
-diversify(w_idx, uniq, cedict_py)
+diversify(w_idx, uniq, uniq_segs, cedict_py)
 
 random.seed(42)
 for v in w_idx.values():
     random.shuffle(v)
-
-print("  pre-segmenting for c_idx...")
-uniq_segs = [list(jieba.cut(s)) for s in uniq]
 
 c_idx = defaultdict(set)
 for w, sids in w_idx.items():
@@ -306,11 +314,11 @@ for k, sids in c_idx.items():
         c_out[k] = {"r": cf.get(k, -1), "s": sids}
 
 out = {"s": uniq, "w": w_out, "c": c_out, "cmp": cmp_out}
-os.makedirs(res, exist_ok=True)
-op = os.path.join(res, "_xiezh_db.json")
-with open(op, 'w') as f:
+res.mkdir(parents=True, exist_ok=True)
+op = res / "_xiezh_db.json"
+with op.open('w') as f:
     json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
-sz = os.path.getsize(op)
+sz = op.stat().st_size
 
 elapsed = time.time() - t0
 print(f"wrote sents: {sz/1024:.0f}K in {elapsed/60:.1f}m")
