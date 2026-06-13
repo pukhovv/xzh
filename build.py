@@ -38,6 +38,28 @@ SOURCES: dict[str, dict] = {
     "zh_cn.txt.gz": {
         "urls": ["https://object.pouta.csc.fi/OPUS-OpenSubtitles/v2018/mono/zh_cn.txt.gz"],
     },
+    # HSK 3.0 word lists (tab-separated: word <TAB> pinyin <TAB> ...)
+    "hsk_words_L1.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%201.txt"],
+    },
+    "hsk_words_L2.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%202.txt"],
+    },
+    "hsk_words_L3.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%203.txt"],
+    },
+    "hsk_words_L4.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%204.txt"],
+    },
+    "hsk_words_L5.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%205.txt"],
+    },
+    "hsk_words_L6.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%206.txt"],
+    },
+    "hsk_words_L79.txt": {
+        "urls": ["https://raw.githubusercontent.com/krmanik/HSK-3.0-words-list/main/New%20HSK%20(2021)/HSK%20List/HSK%207-9.txt"],
+    },
 }
 
 
@@ -147,6 +169,7 @@ def main() -> None:
     run("words.py")
     run("cedict.py")
     run("graph.py")
+    run("hsk.py")
     if not args.skip_sents:
         run("sents.py")
 
