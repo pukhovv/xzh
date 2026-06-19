@@ -45,10 +45,37 @@ def build_compounds(wlist: list[str], pmap: dict) -> dict:
     rank = {w: i for i, w in enumerate(wlist)}
     cw = {}
     for i, w in enumerate(wlist):
-        for c in set(w):
+        for c in dict.fromkeys(w):
             if c not in cw:
                 cw[c] = []
             cw[c].append(w)
+
+    def _select(ws):
+        total_w = sum(1.0 / (rank[w] + 1) for w in ws)
+        sel = []
+        cum = 0.0
+        for w in ws:
+            contrib = (1.0 / (rank[w] + 1)) / total_w
+            if len(sel) >= 2 and contrib < 0.02:
+                break
+            sel.append(w)
+            cum += contrib
+            if len(sel) >= 4 or cum >= 0.85:
+                break
+        return sel
+
+    def _reading(w, c):
+        pys = pmap.get(w, [])
+        if not pys:
+            return [None]
+        pos = [i for i, ch in enumerate(w) if ch == c]
+        readings = set()
+        for py in pys:
+            syls = py.split()
+            for p in pos:
+                if p < len(syls):
+                    readings.add(_base_syl(syls[p]))
+        return sorted(readings) if readings else [None]
 
     result = {}
     for c, words in cw.items():
@@ -61,20 +88,31 @@ def build_compounds(wlist: list[str], pmap: dict) -> dict:
             total_weight = sum(1.0 / (rank[w] + 1) for w in ws)
             sr = (1.0 / (sc_pos + 1)) / total_weight if total_weight > 0 else 0
 
-        sel = []
-        cum = 0.0
-        for w in ws:
-            contrib = (1.0 / (rank[w] + 1)) / total_w
-            if len(sel) >= 2 and contrib < 0.02:
-                break
-            sel.append(w)
-            cum += contrib
-            if len(sel) >= 4 or cum >= 0.85:
-                break
+        sel = _select(ws)
 
-        result[c] = {"compounds": sel, "standalone_ratio": round(sr, 4)}
+        rgroups = {}
+        for w in ws:
+            for r in _reading(w, c):
+                rgroups.setdefault(r, []).append(w)
+        readings = {}
+        for r, group in rgroups.items():
+            if r is None:
+                readings[r] = _select(group)
+            elif len(group) >= 2:
+                readings[r] = _select(group)
+
+        result[c] = {
+            "compounds": sel,
+            "readings": readings,
+            "standalone_ratio": round(sr, 4),
+        }
 
     return result
+
+def _base_syl(py: str) -> str:
+    if len(py) >= 2 and py[-1] == '5' and py[-2].isdigit():
+        return py[:-1]
+    return py
 
 build = Path(sys.argv[1])
 dset = build / "dset"

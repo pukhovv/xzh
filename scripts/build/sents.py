@@ -7,6 +7,10 @@ jieba.setLogLevel(20)
 
 from common import TRANS
 
+if sys.flags.hash_randomization:
+    print("WARNING: PYTHONHASHSEED not set; output may be non-deterministic",
+          file=sys.stderr)
+
 MAX_PER = 4
 MIN_CJK, MAX_CJK = 6, 20
 A, B = 50, 0.3
@@ -90,6 +94,15 @@ def classify(sent: str, tc: str, cedict_py: dict, seg: list[str] | None = None) 
                     readings.add(base_syl(syls[p]))
     return list(readings)[0] if len(readings) == 1 else None
 
+_cls_cache = {}
+def classify_cached(sent: str, tc: str, cedict_py: dict, seg: list[str]) -> str | None:
+    k = (sent, tc)
+    v = _cls_cache.get(k)
+    if v is None:
+        v = classify(sent, tc, cedict_py, seg)
+        _cls_cache[k] = v
+    return v
+
 def diversify(w_idx: dict, pool: list[str], pool_segs: list[list[str]], cedict_py: dict) -> None:
     duoyin = {w for w, pys in cedict_py.items() if len(w) == 1 and len(pys) > 1}
     print(f"  duoyin: {len(duoyin)}")
@@ -98,7 +111,7 @@ def diversify(w_idx: dict, pool: list[str], pool_segs: list[list[str]], cedict_p
         if c not in duoyin or len(sids) < 2: continue
         rs = defaultdict(list)
         for sid in sids:
-            rs[classify(pool[sid], c, cedict_py, pool_segs[sid])].append(sid)
+            rs[classify_cached(pool[sid], c, cedict_py, pool_segs[sid])].append(sid)
         if len(rs) <= 1: continue
         new = []
         def _sk(k):
@@ -113,23 +126,43 @@ def diversify(w_idx: dict, pool: list[str], pool_segs: list[list[str]], cedict_p
             n += 1
     print(f"  re-ranked: {n}")
 
-def dedup(sents: list[str]) -> list[str]:
-    if len(sents) <= 1: return sents
-    def bg(s):
-        cj = ccjk(s)
-        return set(cj[i:i+2] for i in range(len(cj)-1))
+def _seg_jaccard(sgs_a: list[str], sgs_b: list[str]) -> float:
+    sa = set(sgs_a)
+    sb = set(sgs_b)
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / len(sa | sb)
+
+def dedup(sents: list[str], segs: list[list[str]] | None = None) -> list[str]:
+    if len(sents) <= 1:
+        return sents
     kept = []
-    for s in sents:
-        cs = ccjk(s)
+    kept_segs = []
+    for i, s in enumerate(sents):
         dup = False
-        for k in kept:
-            ck = ccjk(k)
-            if cs in ck or ck in cs:
-                if len(cs) <= len(ck): dup = True; break
-            bgs, bgk = bg(s), bg(k)
-            if bgs and bgk and len(bgs & bgk) / max(len(bgs), len(bgk)) > 0.8:
-                dup = True; break
-        if not dup: kept.append(s)
+        s_seg = segs[i] if segs else None
+        for j, k in enumerate(kept):
+            k_seg = kept_segs[j] if segs else None
+            if s_seg and k_seg:
+                if _seg_jaccard(s_seg, k_seg) > 0.5:
+                    dup = True
+                    break
+            else:
+                cs = ccjk(s)
+                ck = ccjk(k)
+                if cs in ck or ck in cs:
+                    if len(cs) <= len(ck):
+                        dup = True
+                        break
+                bgs = set(cs[i:i+2] for i in range(len(cs)-1))
+                bgk = set(ck[i:i+2] for i in range(len(ck)-1))
+                if bgs and bgk and len(bgs & bgk) / max(len(bgs), len(bgk)) > 0.8:
+                    dup = True
+                    break
+        if not dup:
+            kept.append(s)
+            if segs:
+                kept_segs.append(s_seg)
     return kept
 
 build = Path(sys.argv[1])
@@ -214,22 +247,38 @@ with gz.open(opus, 'rt', encoding='utf-8', errors='replace') as f:
 
 if pending:
     print(f"\n  phase 1 done: {len(pending)} uncovered ({len(sub_extras)} extras)")
-    print("  phase 2: substring...")
+    print("  phase 1.5: scavenge pool...")
     rem = {wlist[i] for i in pending}
     rem_sorted = sorted(rem, key=lambda w: wp.get(w, len(wlist)))
-    for text in sub_extras:
-        if not rem: break
-        found = False
+    n_prio = 0
+    for sid, text in enumerate(pool):
+        if not rem:
+            break
         for w in rem_sorted:
             if w not in rem:
                 continue
-            if w in text:
-                if not found:
-                    sid = len(pool); pool.append(text); pool_segs.append(list(jieba.cut(text))); found = True
+            if w in text and sid not in wm[w]:
                 wm[w].append(sid)
+                n_prio += 1
                 if len(wm[w]) >= MAX_PER:
-                    rem.discard(w); pending.discard(wp[w])
-    print(f"    done: {len(rem)} still uncovered")
+                    rem.discard(w)
+                    pending.discard(wp[w])
+    print(f"    pool reuse: {n_prio} matches, {len(rem)} still uncovered")
+    if rem:
+        print("  phase 2: substring...")
+        for text in sub_extras:
+            if not rem: break
+            found = False
+            for w in rem_sorted:
+                if w not in rem:
+                    continue
+                if w in text:
+                    if not found:
+                        sid = len(pool); pool.append(text); pool_segs.append(list(jieba.cut(text))); found = True
+                    wm[w].append(sid)
+                    if len(wm[w]) >= MAX_PER:
+                        rem.discard(w); pending.discard(wp[w])
+        print(f"    done: {len(rem)} still uncovered")
 
 sneed = {w for w in bias if w in wm and len(wm[w]) >= 2}
 for w in sorted(sneed, key=lambda w: wp.get(w, len(wlist))):
@@ -252,8 +301,11 @@ for i, s in enumerate(pool):
     otn[i] = seen[s]
 print(f"  sents: {len(pool)} -> {len(uniq)} unique")
 
-print("  pre-segmenting uniq...")
-uniq_segs = [list(jieba.cut(s)) for s in uniq]
+print("  mapping pool segs to uniq...")
+uniq_segs = [None] * len(uniq)
+for pid, uid in otn.items():
+    if uniq_segs[uid] is None:
+        uniq_segs[uid] = pool_segs[pid]
 
 w_idx = {}
 drm = 0
@@ -264,7 +316,7 @@ for w, sids in wm.items():
         nid = otn.get(sid)
         if nid is not None and nid not in ss:
             dd.append(nid); ss.add(nid)
-    ds = dedup([uniq[i] for i in dd])
+    ds = dedup([uniq[i] for i in dd], [uniq_segs[i] for i in dd])
     drm += len(dd) - len(ds)
     sti = {s: i for i, s in enumerate(uniq)}
     w_idx[w] = [sti[s] for s in ds][:MAX_PER]
@@ -280,26 +332,35 @@ c_idx = defaultdict(set)
 for w, sids in w_idx.items():
     for si, c in enumerate(w):
         for sid in sids:
-            syl = classify(uniq[sid], c, cedict_py, uniq_segs[sid])
+            syl = classify_cached(uniq[sid], c, cedict_py, uniq_segs[sid])
             if syl:
                 c_idx[c + ":" + syl].add(sid)
             c_idx[c].add(sid)
 
 for i, s in enumerate(uniq):
-    for c in set(s):
+    for c in dict.fromkeys(s):
         if '\u4e00' <= c <= '\u9fff' and c in clist_set:
             if len(c_idx.get(c, [])) < MAX_PER + 2:
                 c_idx[c].add(i)
-            syl = classify(s, c, cedict_py, uniq_segs[i])
+            syl = classify_cached(s, c, cedict_py, uniq_segs[i])
             if syl:
                 if len(c_idx.get(c + ":" + syl, [])) < MAX_PER + 2:
                     c_idx[c + ":" + syl].add(i)
 
 c_idx = {k: sorted(list(v))[:MAX_PER + 2] for k, v in c_idx.items()}
-for v in c_idx.values():
-    random.shuffle(v)
+for k in sorted(c_idx):
+    random.shuffle(c_idx[k])
 
-cmp_out = {c: char_cmp[c]["compounds"] for c in clist_set if c in char_cmp}
+cmp_out = {}
+for c in clist_set:
+    if c not in char_cmp:
+        continue
+    info = char_cmp[c]
+    cmp_out[c] = info["compounds"]
+    for reading, words in info.get("readings", {}).items():
+        if reading is None:
+            continue
+        cmp_out[c + ":" + reading] = words
 
 wf = {w: i for i, w in enumerate(wlist)}
 cf = {c: i for i, c in enumerate(freqlist)}
@@ -317,7 +378,7 @@ out = {"s": uniq, "w": w_out, "c": c_out, "cmp": cmp_out}
 res.mkdir(parents=True, exist_ok=True)
 op = res / "_xiezh_db.json"
 with op.open('w') as f:
-    json.dump(out, f, ensure_ascii=False, separators=(',', ':'))
+    json.dump(out, f, ensure_ascii=False, separators=(',', ':'), sort_keys=True)
 sz = op.stat().st_size
 
 elapsed = time.time() - t0

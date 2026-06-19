@@ -2,8 +2,8 @@ import json, re, sys
 from pathlib import Path
 from common import TRANS, parse_chr
 
-TARGET_WORDS = 20000
-TARGET_CHARS = 4000
+TARGET_WORDS = 25000
+TARGET_CHARS = 5000
 ENCODING = "gb2312"
 
 NUM_DIGITS = set("零一二三四五六七八九十百千万亿两")

@@ -61,7 +61,7 @@
             el.appendChild(div);
         }
         // Show popular compounds
-        var cmp = db.cmp && db.cmp[text];
+        var cmp = db.cmp && (db.cmp[key] || db.cmp[text]);
         if (cmp && cmp.length) {
             var cmpDiv = document.getElementById("xiezh-compounds");
             cmpDiv.textContent = cmp.join(" · ");
