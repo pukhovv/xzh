@@ -1,6 +1,7 @@
 <!-- Card HTML -->
 <div id="card-container" data-draw-mode="text">
     <div id="char-info">-</div>
+    <div id="sent-hint">‎</div>
 
     <div id="hanzi-lines">
         <div class="hanzi">‎ </div>
@@ -39,8 +40,8 @@
                     <button id="sound-toggle" class="flat-btn" aria-label="Settings">声</button>
                     <button id="change-mode" class="flat-btn" aria-label="Settings">设</button>
                     <button id="draw-toggle" class="flat-btn" aria-label="Settings">X</button>
-                    <button id="tatoeba-lookup" class="flat-btn" aria-label="Example sentence">句</button>
                     <button id="pleco-lookup" class="flat-btn" aria-label="Lookup in Pleco">鱼</button>
+                    <button id="sent-hint-btn" class="flat-btn" aria-label="Show sentence">句</button>
                 </div>
             </div>
         </div>
@@ -126,17 +127,16 @@
             return res
         });
 
-    var xcacheGet = (prop) => {
-        if (typeof prop != "string") {
-            throw new Error("bad xcache parameters");
-        }
-        return sessionStorage.getItem("_xiehz_" + prop) ?? undefined
+    var _xcacheFallback = {};
+    var xcacheGet = function(prop) {
+        if (typeof prop != "string") throw new Error("bad xcache parameters");
+        try { return sessionStorage.getItem("_xiehz_" + prop) ?? undefined; }
+        catch(e) { return _xcacheFallback[prop]; }
     }
-    var xcacheSet = (prop, v) => {
-        if (typeof prop != "string" || typeof v != "string") {
-            throw new Error("bad xcache parameters");
-        }
-        sessionStorage.setItem("_xiehz_" + prop, v)
+    var xcacheSet = function(prop, v) {
+        if (typeof prop != "string" || typeof v != "string") throw new Error("bad xcache parameters");
+        try { sessionStorage.setItem("_xiehz_" + prop, v); }
+        catch(e) { _xcacheFallback[prop] = v; }
         return v;
     }
 
@@ -606,6 +606,8 @@
         const update = () => {
             const hanzi = activeHanzi();
             xlog("xnote updateChar: " + charIdx + hanzi);
+            document.getElementById("sent-hint").textContent = "\u200e";
+            document.getElementById("sent-hint").removeAttribute("data-active");
             charDisplay.reset(hanziArr, completedIdx);
             var lines = [document.getElementById('hanzi-line1'), document.getElementById('draw-text-content')];
             lines.forEach(function(line) {
@@ -664,18 +666,26 @@
 
         setupClickerBtn('pleco-lookup', () => {
             const text = hanziArr.map(h => h.sym).join("")
-            window.open(`plecoapi://x-callback-url/s?q=${text}`, '_blank');
+            try { window.open(`plecoapi://x-callback-url/s?q=${text}`, '_blank'); }
+            catch(e) { try { var a = document.createElement('a'); a.href = `plecoapi://x-callback-url/s?q=${text}`; a.click(); } catch(er) {} }
         });
 
-        setupClickerBtn('tatoeba-lookup', () => {
-            const text = hanziArr.map(h => h.sym).join("")
-            const url =
-                `https://tatoeba.org/en/sentences/search?from=cmn&has_audio=&list=&native=&original=
-                &orphans=no&query=${encodeURIComponent(text)}&sort=relevance&sort_reverse=&tags=
-                &to=eng&trans_filter=limit&trans_has_audio=&trans_link=&trans_orphan=
-                &trans_to=eng&trans_unapproved=&trans_user=&unapproved=no&user=&word_count_max=&word_count_min=10`
-                    .replace(/\s+/g, '');
-            window.open(url, "blank_");
+        var _sentQueue = null;
+        setupClickerBtn('sent-hint-btn', () => {
+            var db = globalThis._xiezh_db;
+            if (!db) return;
+            var word = "{{text-sc}}".trim();
+            var entry = (db.w && db.w[word]) || (db.c && db.c[word]);
+            if (!entry || !entry.s || !entry.s.length) return;
+            if (!_sentQueue || !_sentQueue.length) {
+                _sentQueue = entry.s.slice();
+                _sentQueue.sort(() => Math.random() - 0.5);
+            }
+            var sid = _sentQueue.pop();
+            var sent = db.s[sid];
+            var h = document.getElementById("sent-hint");
+            h.textContent = sent;
+            h.setAttribute("data-active", "");
         });
 
         setupClickerBtn('change-mode', () => {

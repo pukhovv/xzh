@@ -3,8 +3,8 @@
         <button id="pleco-lookup" style="font-size:1.2rem; background:var(--btn-bg); color:var(--btn-fg); border:var(--stroke-thin) solid var(--btn-border); border-radius:var(--radii); padding:0.4em 0.7em; cursor:pointer;">&#x1F50D;</button>
     </div>
     <div id="character-lines" style="margin-top:1.5rem;">
-        <div style="font-size:48px;line-height:1;font-family:'xcard-kaiti';margin-bottom:0.3rem;">{{text-sc}} | {{text-tc}}</div>
-        <div style="font-size:64px;line-height:1;font-family:'xcard-mbanquetpprc';margin-bottom:0.3rem;">{{text-sc}}</div>
+        <div id="char-kaiti" style="font-size:48px;line-height:1;font-family:'xcard-kaiti';margin-bottom:0.3rem;">{{text-sc}} | {{text-tc}}</div>
+        <div id="char-calligraphy" style="font-size:64px;line-height:1;font-family:'xcard-mbanquetpprc';margin-bottom:0.3rem;">{{text-sc}}</div>
         <div style="font-size:28px;line-height:1.2;">[ {{pinyin}} ]</div>
     </div>
     <div id="xiezh-compounds"></div>
@@ -45,21 +45,42 @@
             var div = document.createElement("div");
             div.className = "xiezh-sentence";
             var sent = db.s[ids[i]];
-            div.addEventListener('click', (function(s) {
-                return function() { window.open("plecoapi://x-callback-url/s?q=" + encodeURIComponent(s), "_blank"); };
-            })(sent));
+            var textSpan = document.createElement("span");
+            textSpan.className = "xiezh-sent-text";
             var parts = sent.split(text);
             for (var j = 0; j < parts.length; j++) {
                 if (j > 0) {
                     var span = document.createElement("span");
                     span.className = matchClass;
                     span.textContent = text;
-                    div.appendChild(span);
+                    textSpan.appendChild(span);
                 }
-                div.appendChild(document.createTextNode(parts[j]));
+                textSpan.appendChild(document.createTextNode(parts[j]));
             }
+            div.appendChild(textSpan);
+            div.addEventListener('click', (function(s) {
+                return function(e) {
+                    try { window.open("plecoapi://x-callback-url/s?q=" + encodeURIComponent(s), "_blank"); }
+                    catch(er) { try { var a = document.createElement('a'); a.href = "plecoapi://x-callback-url/s?q=" + encodeURIComponent(s); a.click(); } catch(e2) {} }
+                };
+            })(sent));
             el.appendChild(div);
         }
+        requestAnimationFrame(function() {
+            var divs = el.querySelectorAll('.xiezh-sentence');
+            for (var i = 0; i < divs.length; i++) {
+                var d = divs[i];
+                var ts = d.querySelector('.xiezh-sent-text');
+                if (!ts) continue;
+                var limit = 10;
+                while (ts.scrollWidth > d.clientWidth - 4 && limit > 0) {
+                    var sz = parseFloat(getComputedStyle(d).fontSize);
+                    if (sz < 1.05) break;
+                    d.style.fontSize = (sz * 0.94) + 'px';
+                    limit--;
+                }
+            }
+        });
         // Show popular compounds
         var cmp = db.cmp && (db.cmp[key] || db.cmp[text]);
         if (cmp && cmp.length) {
@@ -67,11 +88,53 @@
             cmpDiv.textContent = cmp.join(" · ");
             cmpDiv.style.display = "block";
         }
+        // Color characters by tone
+        if (pinyin && text.length >= 1) {
+            var syllables = pinyin.replace(/\/\//g, '').split(' ');
+            var tones = [];
+            for (var i = 0; i < syllables.length; i++) {
+                tones.push(decodePinyin(syllables[i]).tone);
+            }
+            while (tones.length < text.length) tones.push(5);
+            var kaitiDiv = document.getElementById("char-kaiti");
+            if (kaitiDiv) {
+                kaitiDiv.innerHTML = '';
+                for (var i = 0; i < text.length; i++) {
+                    var s = document.createElement('span');
+                    s.textContent = text[i];
+                    s.style.color = 'var(--py-color' + (tones[i] || 5) + ')';
+                    kaitiDiv.appendChild(s);
+                }
+                var textTC = "{{text-tc}}".trim();
+                kaitiDiv.appendChild(document.createTextNode(' | '));
+                if (textTC.length === text.length) {
+                    for (var i = 0; i < textTC.length; i++) {
+                        var s = document.createElement('span');
+                        s.textContent = textTC[i];
+                        s.style.color = 'var(--py-color' + (tones[i] || 5) + ')';
+                        kaitiDiv.appendChild(s);
+                    }
+                } else {
+                    kaitiDiv.appendChild(document.createTextNode(textTC));
+                }
+            }
+            var calligDiv = document.getElementById("char-calligraphy");
+            if (calligDiv) {
+                calligDiv.innerHTML = '';
+                for (var i = 0; i < text.length; i++) {
+                    var s = document.createElement('span');
+                    s.textContent = text[i];
+                    s.style.color = 'var(--py-color' + (tones[i] || 5) + ')';
+                    calligDiv.appendChild(s);
+                }
+            }
+        }
     })();
 
     document.getElementById("pleco-lookup").addEventListener('click', function() {
         var text = "{{text-sc}}";
-        window.open("plecoapi://x-callback-url/s?q=" + text, "_blank");
+        try { window.open("plecoapi://x-callback-url/s?q=" + text, "_blank"); }
+        catch(e) { try { var a = document.createElement('a'); a.href = "plecoapi://x-callback-url/s?q=" + text; a.click(); } catch(er) {} }
     });
     var bg = getComputedStyle(document.body).backgroundColor;
     document.getElementById("pleco-lookup").style.backgroundColor = bg;

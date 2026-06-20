@@ -419,26 +419,46 @@ body {
   margin-right: auto;
 }
 
+/* Front-card sentence hint (pre-filled with invisible char, no re-layout) */
+#sent-hint {
+    text-align: center;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#sent-hint[data-active] {
+    border-left: 2px solid var(--accent-weak);
+    padding-left: 0.5rem;
+}
+
 /* Back-card example sentences */
 #xiezh-sentences {
-  display: none;
-  margin-top: 1.8rem;
-  font-size: 1.05rem;
-  line-height: 1.6;
-  max-width: 28rem;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: left;
-  padding: 0 1rem;
+    display: none;
+    margin-top: 1.8rem;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 28rem;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    padding: 0 1rem;
 }
 
 .xiezh-sentence {
-  margin-bottom: 0.5rem;
-  padding: 0.3rem 0.25rem;
-  border-left: 2px solid var(--accent-weak);
-  /* font-family: 'xcard-fzfangsong', serif; */
-  font-size: 1.6rem;
-  line-height: 1.55;
+    position: relative;
+    margin-bottom: 0.5rem;
+    padding: 0.3rem 0.25rem;
+    border-left: 2px solid var(--accent-weak);
+    /* font-family: 'xcard-fzfangsong', serif; */
+    font-size: 1.6rem;
+    line-height: 1.55;
+}
+
+.xiezh-sent-text {
+    display: inline;
 }
 
 .xiezh-sent-match {
