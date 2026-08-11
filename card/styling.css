@@ -422,7 +422,7 @@ body {
 /* Front-card sentence hint (pre-filled with invisible char, no re-layout) */
 #sent-hint {
     text-align: center;
-    font-size: 0.95rem;
+    font-size: 1.2rem;
     line-height: 1.2;
     color: var(--fg);
     white-space: nowrap;
